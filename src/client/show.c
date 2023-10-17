@@ -32,12 +32,12 @@ static int
 cmd_show_neighbors(struct lldpctl_conn_t *conn, struct writer *w,
     struct cmd_env *env, void *arg)
 {
-	log_debug("lldpctl", "show neighbors data (%s) %s hidden neighbors",
+	log_debug("ub-lldpctl", "show neighbors data (%s) %s hidden neighbors",
 	    cmdenv_get(env, "summary")?"summary":
 	    cmdenv_get(env, "detailed")?"detailed":
 	    "normal", cmdenv_get(env, "hidden")?"with":"without");
 	if (cmdenv_get(env, "ports"))
-		log_debug("lldpctl", "restrict to the following ports: %s",
+		log_debug("ub-lldpctl", "restrict to the following ports: %s",
 		    cmdenv_get(env, "ports"));
 
 	display_interfaces(conn, w, env, !!cmdenv_get(env, "hidden"),
@@ -61,12 +61,12 @@ static int
 cmd_show_interfaces(struct lldpctl_conn_t *conn, struct writer *w,
     struct cmd_env *env, void *arg)
 {
-	log_debug("lldpctl", "show interfaces data (%s) %s hidden interfaces",
+	log_debug("ub-lldpctl", "show interfaces data (%s) %s hidden interfaces",
 	    cmdenv_get(env, "summary")?"summary":
 	    cmdenv_get(env, "detailed")?"detailed":
 	    "normal", cmdenv_get(env, "hidden")?"with":"without");
 	if (cmdenv_get(env, "ports"))
-		log_debug("lldpctl", "restrict to the following ports: %s",
+		log_debug("ub-lldpctl", "restrict to the following ports: %s",
 		    cmdenv_get(env, "ports"));
 
 	display_local_interfaces(conn, w, env, !!cmdenv_get(env, "hidden"),
@@ -88,7 +88,7 @@ static int
 cmd_show_chassis(struct lldpctl_conn_t *conn, struct writer *w,
     struct cmd_env *env, void *arg)
 {
-	log_debug("lldpctl", "show chassis data (%s)",
+	log_debug("ub-lldpctl", "show chassis data (%s)",
 	    cmdenv_get(env, "summary")?"summary":
 	    cmdenv_get(env, "detailed")?"detailed":
 	    "normal");
@@ -112,12 +112,12 @@ static int
 cmd_show_interface_stats(struct lldpctl_conn_t *conn, struct writer *w,
     struct cmd_env *env, void *arg)
 {
-	log_debug("lldpctl", "show stats data");
+	log_debug("ub-lldpctl", "show stats data");
 	if (cmdenv_get(env, "ports"))
-		log_debug("lldpctl", "restrict to the following ports: %s",
+		log_debug("ub-lldpctl", "restrict to the following ports: %s",
 		    cmdenv_get(env, "ports"));
 	if (cmdenv_get(env, "summary"))
-		log_debug("lldpctl", "show summary of stats across ports");
+		log_debug("ub-lldpctl", "show summary of stats across ports");
 
 	display_interfaces_stats(conn, w, env);
 
@@ -139,7 +139,7 @@ static int
 cmd_show_configuration(struct lldpctl_conn_t *conn, struct writer *w,
     struct cmd_env *env, void *arg)
 {
-	log_debug("lldpctl", "show running configuration");
+	log_debug("ub-lldpctl", "show running configuration");
 	display_configuration(conn, w);
 	return 1;
 }
@@ -227,20 +227,20 @@ cmd_watch_neighbors(struct lldpctl_conn_t *conn, struct writer *w,
 		const char *errstr;
 		limit = strtonum(limit_str, 1, LLONG_MAX, &errstr);
 		if (errstr != NULL) {
-			log_warnx("lldpctl", "specified limit (%s) is %s and ignored",
+			log_warnx("ub-lldpctl", "specified limit (%s) is %s and ignored",
 			    limit_str, errstr);
 		}
 	}
 
-	log_debug("lldpctl", "watch for neighbor changes");
+	log_debug("ub-lldpctl", "watch for neighbor changes");
 	if (lldpctl_watch_callback2(conn, watchcb, &wa) < 0) {
-		log_warnx("lldpctl", "unable to watch for neighbors. %s",
+		log_warnx("ub-lldpctl", "unable to watch for neighbors. %s",
 		    lldpctl_last_strerror(conn));
 		return 0;
 	}
 	while (1) {
 		if (lldpctl_watch(conn) < 0) {
-			log_warnx("lldpctl", "unable to watch for neighbors. %s",
+			log_warnx("ub-lldpctl", "unable to watch for neighbors. %s",
 			    lldpctl_last_strerror(conn));
 			return 0;
 		}
@@ -278,9 +278,6 @@ register_common_commands(struct cmd_node *root, int neighbor)
 
 	/* Some specific port */
 	cmd_restrict_ports(root);
-
-	/* Specific protocol */
-	cmd_restrict_protocol(root);
 }
 
 /**

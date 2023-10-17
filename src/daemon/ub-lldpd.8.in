@@ -14,10 +14,10 @@
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
 .Dd $Mdocdate: August 21 2008 $
-.Dt LLDPD 8
+.Dt UB_LLDPD 8
 .Os
 .Sh NAME
-.Nm lldpd
+.Nm ub-lldpd
 .Nd LLDP daemon
 .Sh SYNOPSIS
 .Nm
@@ -33,7 +33,7 @@
 .Op Fl C Ar interfaces
 .Op Fl M Ar class
 .Op Fl H Ar hide
-.Op Fl L Ar lldpcli
+.Op Fl L Ar ub-lldpcli
 .Op Fl O Ar configfile
 .Sh DESCRIPTION
 .Nm
@@ -202,7 +202,7 @@ If an interface name is matched, the first IPv4 address and the first
 IPv6 address associated to this interface will be chosen.
 .It Fl u Ar file
 Specify the Unix-domain socket used for communication with
-.Xr lldpctl 8 .
+.Xr ub-lldpctl 8 .
 .It Fl I Ar interfaces
 Specify which interface to listen and send LLDPDU to. Without this
 option,
@@ -255,11 +255,11 @@ Generic Endpoint (Class I)
 .It Sy 2
 Media Endpoint (Class II). In this case, the standard requires to
 define at least one network policy through
-.Nm lldpcli .
+.Nm ub-lldpcli .
 .It Sy 3
 Communication Device Endpoints (Class III). In this case, the standard
 requires to define at least one network policy through
-.Nm lldpcli .
+.Nm ub-lldpcli .
 .It Sy 4
 Network Connectivity Device
 .El
@@ -273,15 +273,15 @@ transmit sensible information like serial numbers.
 Filter neighbors. See section
 .Sx FILTERING NEIGHBORS
 for details.
-.It Fl L Ar lldpcli
+.It Fl L Ar ub-lldpcli
 Provide an alternative path to
-.Nm lldpcli
+.Nm ub-lldpcli
 for configuration. If empty, does not use
-.Nm lldpcli
+.Nm ub-lldpcli
 for configuration.
 .It Fl O Ar configfile
 Override default configuration locations processed by
-.Nm lldpcli
+.Nm ub-lldpcli
 at start. If a directory is provided, each file contained in it will be read if ending by
 .Sy .conf.
 Order is alphabetical.
@@ -393,22 +393,22 @@ column tells that only one neighbor will be kept.
 .Bl -tag -width "@LLDPD_CTL_SOCKET@XX" -compact
 .It @LLDPD_CTL_SOCKET@
 Unix-domain socket used for communication with
-.Xr lldpctl 8 .
-.It /etc/lldpd.conf
+.Xr ub-lldpctl 8 .
+.It /etc/ub-lldpd.conf
 Configuration file for
 .Nm .
 Commands in this files are executed by
-.Xr lldpcli 8
+.Xr ub-lldpcli 8
 at start.
-.It /etc/lldpd.d
+.It /etc/ub-lldpd.d
 Directory containing configuration files whose commands are executed
 by
-.Xr lldpcli 8
+.Xr ub-lldpcli 8
 at start.
 .El
 .Sh SEE ALSO
-.Xr lldpctl 8 ,
-.Xr lldpcli 8 ,
+.Xr ub-lldpctl 8 ,
+.Xr ub-lldpcli 8 ,
 .Xr snmpd 8
 .Sh HISTORY
 The

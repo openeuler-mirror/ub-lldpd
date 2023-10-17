@@ -291,7 +291,7 @@ lldpctl_atom_create(lldpctl_atom_t *atom)
 /**
  * Get somethin with IO.
  *
- * @param conn       The connection to lldpd.
+ * @param conn       The connection to ub-lldpd.
  * @param state_send State to be when "sending"
  * @param state_recv State to be when "receiving"
  * @param state_data Ancillary data for state handling

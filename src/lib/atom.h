@@ -23,7 +23,7 @@
 
 /* connection.c */
 struct lldpctl_conn_t {
-	/* the Unix-domain socket to connect to lldpd */
+	/* the Unix-domain socket to connect to ub-lldpd */
 	char *ctlname;
 
 	/* Callback handling */
@@ -96,30 +96,6 @@ typedef enum {
 	atom_port,
 	atom_mgmts_list,
 	atom_mgmt,
-#ifdef ENABLE_DOT3
-	atom_dot3_power,
-#endif
-#ifdef ENABLE_DOT1
-	atom_vlans_list,
-	atom_vlan,
-	atom_ppvids_list,
-	atom_ppvid,
-	atom_pis_list,
-	atom_pi,
-#endif
-#ifdef ENABLE_LLDPMED
-	atom_med_policies_list,
-	atom_med_policy,
-	atom_med_locations_list,
-	atom_med_location,
-	atom_med_caelements_list,
-	atom_med_caelement,
-	atom_med_power,
-#endif
-#ifdef ENABLE_CUSTOM
-	atom_custom_list,
-	atom_custom,
-#endif
 	atom_chassis,
 } atom_t;
 
@@ -207,81 +183,6 @@ struct _lldpctl_atom_mgmt_t {
 	lldpctl_atom_t *parent;
 	struct lldpd_mgmt *mgmt;
 };
-
-#ifdef ENABLE_DOT3
-struct _lldpctl_atom_dot3_power_t {
-	lldpctl_atom_t base;
-	struct _lldpctl_atom_port_t *parent;
-};
-#endif
-
-#ifdef ENABLE_DOT1
-struct _lldpctl_atom_vlan_t {
-	lldpctl_atom_t base;
-	struct _lldpctl_atom_port_t *parent;
-	struct lldpd_vlan *vlan;
-};
-
-struct _lldpctl_atom_ppvid_t {
-	lldpctl_atom_t base;
-	struct _lldpctl_atom_port_t *parent;
-	struct lldpd_ppvid *ppvid;
-};
-
-struct _lldpctl_atom_pi_t {
-	lldpctl_atom_t base;
-	struct _lldpctl_atom_port_t *parent;
-	struct lldpd_pi *pi;
-};
-#endif
-
-#ifdef ENABLE_LLDPMED
-struct _lldpctl_atom_med_policy_t {
-	lldpctl_atom_t base;
-	struct _lldpctl_atom_port_t *parent;
-	struct lldpd_med_policy *policy;
-};
-
-struct _lldpctl_atom_med_location_t {
-	lldpctl_atom_t base;
-	struct _lldpctl_atom_port_t *parent;
-	struct lldpd_med_loc *location;
-};
-
-/* This list should have the same structure than _llpdctl_atom_any_list_t */
-struct _lldpctl_atom_med_caelements_list_t {
-	lldpctl_atom_t base;
-	struct _lldpctl_atom_med_location_t *parent;
-};
-
-struct _lldpctl_atom_med_caelement_t {
-	lldpctl_atom_t base;
-	struct _lldpctl_atom_med_location_t *parent;
-	int type;
-	uint8_t *value;
-	size_t   len;
-};
-
-struct _lldpctl_atom_med_power_t {
-	lldpctl_atom_t base;
-	struct _lldpctl_atom_port_t *parent;
-};
-#endif
-
-#ifdef ENABLE_CUSTOM
-struct _lldpctl_atom_custom_list_t {
-	lldpctl_atom_t base;
-	struct _lldpctl_atom_port_t *parent;
-	struct lldpd_custom_list *list;
-};
-
-struct _lldpctl_atom_custom_t {
-	lldpctl_atom_t base;
-	struct _lldpctl_atom_port_t *parent;
-	int op;
-	struct lldpd_custom *tlv;
-};
-#endif
 
 struct lldpctl_atom_t *_lldpctl_new_atom(lldpctl_conn_t *conn, atom_t type, ...);
 

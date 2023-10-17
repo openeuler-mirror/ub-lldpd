@@ -321,7 +321,7 @@ json_end(struct writer *w)
 	struct json_writer_private *p = w->priv;
 	while ((p->current = p->current->parent) != NULL && p->current->tag != OBJECT);
 	if (p->current == NULL) {
-		fatalx("lldpctl", "unbalanced tags");
+		fatalx("ub-lldpctl", "unbalanced tags");
 		return;
 	}
 
@@ -341,7 +341,7 @@ json_finish(struct writer *w)
 {
 	struct json_writer_private *p = w->priv;
 	if (p->current != p->root)
-		log_warnx("lldpctl", "unbalanced tags");
+		log_warnx("ub-lldpctl", "unbalanced tags");
 	json_free(p);
 	free(p);
 	free(w);

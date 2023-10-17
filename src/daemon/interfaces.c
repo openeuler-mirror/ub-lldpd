@@ -1,5 +1,6 @@
 /* -*- mode: c; c-file-style: "openbsd" -*- */
 /*
+ * Copyright (c) 2023-2023 Hisilicon Limited.
  * Copyright (c) 2012 Vincent Bernat <bernat@luffy.cx>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -32,39 +33,6 @@ lldpd_af(int af)
 	case LLDPD_AF_IPV6: return AF_INET6;
 	case LLDPD_AF_LAST: return AF_MAX;
 	default: return AF_UNSPEC;
-	}
-}
-
-/* Generic ethernet interface initialization */
-/**
- * Enable multicast on the given interface.
- */
-void
-interfaces_setup_multicast(struct lldpd *cfg, const char *name,
-    int remove)
-{
-	int rc;
-	size_t i, j;
-	const u_int8_t *mac;
-	const u_int8_t zero[ETHER_ADDR_LEN] = {};
-
-	for (i = 0; cfg->g_protocols[i].mode != 0; i++) {
-		if (!cfg->g_protocols[i].enabled) continue;
-		for (j = 0;
-		     j < sizeof(cfg->g_protocols[0].mac)/sizeof(cfg->g_protocols[0].mac[0]);
-		     j++) {
-			mac = cfg->g_protocols[i].mac[j];
-			if (memcmp(mac, zero, ETHER_ADDR_LEN) == 0) break;
-			if ((rc = priv_iface_multicast(name, mac, !remove)) != 0) {
-				errno = rc;
-				if (errno != ENOENT)
-					log_debug("interfaces",
-					    "unable to %s %s address to multicast filter for %s (%s)",
-					    (remove)?"delete":"add",
-					    cfg->g_protocols[i].name,
-					    name, strerror(rc));
-			}
-		}
 	}
 }
 
@@ -170,7 +138,7 @@ interfaces_indextointerface(struct interfaces_device_list *interfaces,
 		if (iface->index == index)
 			return iface;
 	}
-	log_debug("interfaces", "cannot get interface for index %d",
+	log_debug("interfaces", "cannot get UB interface for index %d",
 	    index);
 	return NULL;
 }
@@ -180,6 +148,7 @@ interfaces_helper_allowlist(struct lldpd *cfg,
     struct interfaces_device_list *interfaces)
 {
 	struct interfaces_device *iface;
+	int found = 0;
 
 	if (!cfg->g_config.c_iface_pattern)
 		return;
@@ -194,152 +163,16 @@ interfaces_helper_allowlist(struct lldpd *cfg,
 		case 2:
 			log_debug("interfaces", "allow %s (consider it as a physical interface)",
 			    iface->name);
+			found = 1;
 			iface->type |= IFACE_PHYSICAL_T;
 			continue;
 		}
 	}
-}
 
-#ifdef ENABLE_DOT1
-static void
-iface_append_vlan(struct lldpd *cfg,
-    struct interfaces_device *vlan,
-    struct interfaces_device *lower)
-{
-	struct lldpd_hardware *hardware =
-	    lldpd_get_hardware(cfg, lower->name, lower->index);
-	struct lldpd_port *port;
-	struct lldpd_vlan *v;
-	char *name = NULL;
-	uint16_t vlan_id;
-
-	if (hardware == NULL) {
-		log_debug("interfaces",
-		    "cannot find real interface %s for VLAN %s",
-		    lower->name, vlan->name);
-		return;
-	}
-	port = &hardware->h_lport;
-
-	for (int i = 0; (i < VLAN_BITMAP_LEN); i++) {
-		if (vlan->vlan_bmap[i] == 0)
-			continue;
-		for (unsigned bit = 0; bit < 32; bit++) {
-			uint32_t mask = 1L << bit;
-			if (!(vlan->vlan_bmap[i] & mask))
-				continue;
-			vlan_id = (i * 32) + bit;
-			if (asprintf(&name, "vlan%d", vlan_id) == -1)
-				return;
-
-			/* Check if the VLAN is already here. */
-			TAILQ_FOREACH(v, &port->p_vlans, v_entries)
-				if (strncmp(name, v->v_name, IFNAMSIZ) == 0) {
-					free(name);
-					return;
-				}
-
-			if ((v = (struct lldpd_vlan *)
-				calloc(1, sizeof(struct lldpd_vlan))) == NULL) {
-				free(name);
-				return;
-			}
-			v->v_name = name;
-			v->v_vid = vlan_id;
-			if (vlan->pvid)
-				port->p_pvid = vlan->pvid;
-			log_debug("interfaces", "append VLAN %s for %s",
-				v->v_name,
-				hardware->h_ifname);
-			TAILQ_INSERT_TAIL(&port->p_vlans, v, v_entries);
-		}
+	if (!found) {
+		fatalx("interfaces", "The device is not in the UB device linked list.");
 	}
 }
-
-/**
- * Append VLAN to the lowest possible interface.
- *
- * @param vlan  The VLAN interface (used to get VLAN ID).
- * @param upper The upper interface we are currently examining.
- * @param depth Depth of the stack (avoid infinite recursion)
- *
- * Initially, upper == vlan. This function will be called recursively.
- */
-static void
-iface_append_vlan_to_lower(struct lldpd *cfg,
-    struct interfaces_device_list *interfaces,
-    struct interfaces_device *vlan,
-    struct interfaces_device *upper,
-    int depth)
-{
-	if (depth > 5) {
-		log_warnx("interfaces",
-		    "BUG: maximum depth reached when applying VLAN %s (loop?)",
-		    vlan->name);
-		return;
-	}
-	depth++;
-	struct interfaces_device *lower;
-	log_debug("interfaces",
-	    "looking to apply VLAN %s to physical interface behind %s",
-	    vlan->name, upper->name);
-
-	/* Some bridges managed VLAN internally, skip them. */
-	if (upper->type & IFACE_BRIDGE_VLAN_T) {
-		log_debug("interfaces", "VLAN %s ignored for VLAN-aware bridge interface %s",
-		    vlan->name, upper->name);
-		return;
-	}
-
-	/* Easy: check if we have a lower interface. */
-	if (upper->lower) {
-		log_debug("interfaces", "VLAN %s on lower interface %s",
-		    vlan->name, upper->name);
-		iface_append_vlan_to_lower(cfg,
-		    interfaces, vlan,
-		    upper->lower,
-		    depth);
-		return;
-	}
-
-	/* Other easy case, we have a physical interface. */
-	if (upper->type & IFACE_PHYSICAL_T) {
-		log_debug("interfaces", "VLAN %s on physical interface %s",
-		    vlan->name, upper->name);
-		iface_append_vlan(cfg, vlan, upper);
-		return;
-	}
-
-	/* We can now search for interfaces that have our interface as an upper
-	 * interface. */
-	TAILQ_FOREACH(lower, interfaces, next) {
-		if (lower->upper != upper) continue;
-		log_debug("interfaces", "VLAN %s on lower interface %s",
-		    vlan->name, upper->name);
-		iface_append_vlan_to_lower(cfg,
-		    interfaces, vlan, lower, depth);
-	}
-}
-
-void
-interfaces_helper_vlan(struct lldpd *cfg,
-    struct interfaces_device_list *interfaces)
-{
-	struct interfaces_device *iface;
-
-	TAILQ_FOREACH(iface, interfaces, next) {
-		if (!(iface->type & IFACE_VLAN_T) && bitmap_isempty(iface->vlan_bmap))
-			continue;
-
-		/* We need to find the physical interfaces of this
-		   vlan, through bonds and bridges. */
-		log_debug("interfaces", "search physical interface for VLAN interface %s",
-		    iface->name);
-		iface_append_vlan_to_lower(cfg, interfaces,
-		    iface, iface, 0);
-	}
-}
-#endif
 
 /* Fill out chassis ID if not already done. Only physical interfaces are
  * considered. */
@@ -363,7 +196,7 @@ interfaces_helper_chassis(struct lldpd *cfg,
 		(LOCAL_CHASSIS(cfg)->c_cap_enabled == 0))
 	    LOCAL_CHASSIS(cfg)->c_cap_enabled = LLDP_CAP_STATION;
 
-	/* Do not modify the chassis if it's already set to a MAC address or if
+	/* Do not modify the chassis if it's already set to a GUID or if
 	 * it's set to a local address equal to the user-provided
 	 * configuration. */
 	if ((LOCAL_CHASSIS(cfg)->c_id != NULL &&
@@ -589,7 +422,7 @@ interfaces_helper_port_name_desc(struct lldpd *cfg,
 	*/
 	int has_alias = (iface->alias != NULL
 	    && strlen(iface->alias) != 0
-	    && strncmp("lldpd: ", iface->alias, 7));
+	    && strncmp("ub-lldpd: ", iface->alias, strlen("ub-lldpd: ")));
 	int portid_type = cfg->g_config.c_lldp_portid_type;
 	if (portid_type == LLDP_PORTID_SUBTYPE_IFNAME ||
 	    (portid_type == LLDP_PORTID_SUBTYPE_UNKNOWN && has_alias) ||
@@ -620,7 +453,7 @@ interfaces_helper_port_name_desc(struct lldpd *cfg,
 		}
 	} else {
 		if (port->p_id_subtype != LLDP_PORTID_SUBTYPE_LOCAL) {
-			log_debug("interfaces", "use MAC address for %s",
+			log_debug("interfaces", "use GUID for %s",
 			    hardware->h_ifname);
 			port->p_id_subtype = LLDP_PORTID_SUBTYPE_LLADDR;
 			free(port->p_id);
@@ -662,7 +495,7 @@ interfaces_helper_physical(struct lldpd *cfg,
 		if (!(iface->type & IFACE_PHYSICAL_T)) continue;
 		if (iface->ignore) continue;
 
-		log_debug("interfaces", "%s is an acceptable ethernet device",
+		log_debug("interfaces", "%s is an acceptable UB device",
 		    iface->name);
 		created = 0;
 		if ((hardware = lldpd_get_hardware(cfg,
@@ -698,8 +531,6 @@ interfaces_helper_physical(struct lldpd *cfg,
 				continue;
 			}
 			hardware->h_ops = ops;
-			hardware->h_mangle = (iface->upper &&
-			    iface->upper->type & IFACE_BOND_T);
 		}
 		if (created)
 			interfaces_helper_add_hardware(cfg, hardware);
@@ -713,20 +544,14 @@ interfaces_helper_physical(struct lldpd *cfg,
 						       interface. */
 
 		/* Get local address */
-		memcpy(&hardware->h_lladdr, iface->address, ETHER_ADDR_LEN);
+		memcpy(&hardware->h_lladdr, iface->address + (GUID_LEN - ETHER_ADDR_LEN),
+				ETHER_ADDR_LEN);
 
 		/* Fill information about port */
 		interfaces_helper_port_name_desc(cfg, hardware, iface);
 
 		/* Fill additional info */
 		hardware->h_mtu = iface->mtu ? iface->mtu : 1500;
-
-#ifdef ENABLE_DOT3
-		if (iface->upper && iface->upper->type & IFACE_BOND_T)
-			hardware->h_lport.p_aggregid = iface->upper->index;
-		else
-			hardware->h_lport.p_aggregid = 0;
-#endif
 	}
 }
 
@@ -743,12 +568,7 @@ interfaces_helper_promisc(struct lldpd *cfg,
 }
 
 /**
- * Send the packet using the hardware function. Optionnaly mangle the MAC address.
- *
- * With bonds, we have duplicate MAC address on different physical
- * interfaces. We need to alter the source MAC address when we send on an
- * inactive slave. The `h_mangle` flah is used to know if we need to do
- * something like that.
+ * Send the packet using the hardware function. Optionnaly mangle the GUID.
  */
 int
 interfaces_send_helper(struct lldpd *cfg,
@@ -760,28 +580,6 @@ interfaces_send_helper(struct lldpd *cfg,
 		    "packet to send on %s is too small!",
 		    hardware->h_ifname);
 		return 0;
-	}
-	if (hardware->h_mangle) {
-#define MAC_UL_ADMINISTERED_BIT_MASK 0x02
-		char *src_mac = buffer + ETHER_ADDR_LEN;
-		char arbitrary[] = { 0x00, 0x60, 0x08, 0x69, 0x97, 0xef};
-
-		switch (cfg->g_config.c_bond_slave_src_mac_type) {
-		case LLDP_BOND_SLAVE_SRC_MAC_TYPE_LOCALLY_ADMINISTERED:
-			if (!(*src_mac & MAC_UL_ADMINISTERED_BIT_MASK)) {
-				*src_mac |= MAC_UL_ADMINISTERED_BIT_MASK;
-				break;
-			}
-			/* Fallback to fixed value */
-			memcpy(src_mac, arbitrary, ETHER_ADDR_LEN);
-			break;
-		case LLDP_BOND_SLAVE_SRC_MAC_TYPE_FIXED:
-			memcpy(src_mac, arbitrary, ETHER_ADDR_LEN);
-			break;
-		case LLDP_BOND_SLAVE_SRC_MAC_TYPE_ZERO:
-			memset(src_mac, 0, ETHER_ADDR_LEN);
-			break;
-		}
 	}
 	return hardware->h_ops->send(cfg, hardware, buffer, size);
 }

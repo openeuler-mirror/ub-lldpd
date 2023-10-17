@@ -1,5 +1,6 @@
 /* -*- mode: c; c-file-style: "openbsd" -*- */
 /*
+ * Copyright (c) 2023-2023 Hisilicon Limited.
  * Copyright (c) 2008 Vincent Bernat <bernat@luffy.cx>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -69,11 +70,6 @@ asroot_open()
 		PROCFS_SYS_NET "ipv6/conf/all/forwarding",
 		"/proc/net/bonding/[^.][^/]*",
 		"/proc/self/net/bonding/[^.][^/]*",
-#ifdef ENABLE_OLDIES
-		SYSFS_CLASS_NET "[^.][^/]*/brforward",
-		SYSFS_CLASS_NET "[^.][^/]*/brport",
-		SYSFS_CLASS_NET "[^.][^/]*/brif/[^.][^/]*/port_no",
-#endif
 		SYSFS_CLASS_DMI "product_version",
 		SYSFS_CLASS_DMI "product_serial",
 		SYSFS_CLASS_DMI "product_name",
@@ -199,9 +195,45 @@ end:
 	if (fd != -1) close(fd);
 }
 
+static int
+asroot_iface_get_hw_type(const char *name, int *hwtype)
+{
+	struct ifreq tmp;
+	int sock;
+
+	if (name == NULL) {
+		log_warn("interfaces", "Device name is null");
+		return -1;
+	}
+
+	if (strlen(name) >= sizeof(tmp.ifr_name)) {
+		log_warn("interfaces", "Device name too long: %s", name);
+		return -1;
+	}
+
+	sock = socket(AF_INET, SOCK_DGRAM, 0);
+	if (sock < 0) {
+		log_warn("interfaces", "Can't create socket for %s", name);
+		return -1;
+	}
+
+	memset(&tmp, 0, sizeof(tmp));
+	strcpy(tmp.ifr_name, name);
+	if (ioctl(sock, SIOCGIFHWADDR, &tmp) < 0) {
+		log_warn("interfaces", "Error getting hardware address for %s", name);
+		close(sock);
+		return -1;
+	}
+	*hwtype = tmp.ifr_hwaddr.sa_family;
+	close(sock);
+	return 0;
+}
+
 int
 asroot_iface_init_os(int ifindex, char *name, int *fd)
 {
+	struct sock_fprog prog;
+	int hwtype;
 	int rc;
 	/* Open listening socket to receive/send frames */
 	if ((*fd = socket(PF_PACKET, SOCK_RAW,
@@ -224,11 +256,13 @@ asroot_iface_init_os(int ifindex, char *name, int *fd)
 
 	/* Set filter */
 	log_debug("privsep", "set BPF filter for %s", name);
-	static struct sock_filter lldpd_filter_f[] = { LLDPD_FILTER_F };
-	struct sock_fprog prog = {
-		.filter = lldpd_filter_f,
-		.len = sizeof(lldpd_filter_f) / sizeof(struct sock_filter)
-	};
+	if (asroot_iface_get_hw_type(name, &hwtype) != 0)
+		return -1;
+
+	static struct sock_filter ub_lldpd_filter_f[] = { UB_LLDPD_FILTER_F };
+	prog.filter = ub_lldpd_filter_f;
+	prog.len = sizeof(ub_lldpd_filter_f) / sizeof(struct sock_filter);
+
 	if (setsockopt(*fd, SOL_SOCKET, SO_ATTACH_FILTER,
 	    &prog, sizeof(prog)) < 0) {
 		rc = errno;
@@ -305,23 +339,23 @@ asroot_iface_description_os(const char *name, const char *description)
 	free(file);
 	if (strlen(description) == 0 &&
 	    fgets(descr, sizeof(descr), fp) != NULL) {
-		if (strncmp(descr, "lldpd: ", 7) == 0) {
-			if (strncmp(descr + 7, "was ", 4) == 0) {
+		if (strncmp(descr, "ub-lldpd: ", strlen("ub-lldpd: ")) == 0) {
+			if (strncmp(descr + strlen("ub-lldpd: "), "was ", strlen("was ")) == 0) {
 				/* Already has an old neighbor */
 				fclose(fp);
 				return 0;
 			} else {
 				/* Append was */
-				memmove(descr + 11, descr + 7,
-				    sizeof(descr) - 11);
-				memcpy(descr, "lldpd: was ", 11);
+				memmove(descr + strlen("ub-lldpd: was "), descr + strlen("ub-lldpd: "),
+				    sizeof(descr) - strlen("ub-lldpd: was "));
+				memcpy(descr, "ub-lldpd: was ", strlen("ub-lldpd: was "));
 			}
 		} else {
 			/* No description, no neighbor */
-			strlcpy(descr, "lldpd: no neighbor", sizeof(descr));
+			strlcpy(descr, "ub-lldpd: no neighbor", sizeof(descr));
 		}
 	} else
-		snprintf(descr, sizeof(descr), "lldpd: connected to %s", description);
+		snprintf(descr, sizeof(descr), "ub-lldpd: connected to %s", description);
 	if (fputs(descr, fp) == EOF) {
 		log_debug("privsep", "cannot set interface description for %s",
 		    name);
@@ -355,6 +389,8 @@ asroot_iface_promisc_os(const char *name)
 	}
 
 	if (ifr.ifr_flags & IFF_PROMISC) {
+		log_dfx("privsep", "promiscuous mode is enabled for %s, no need to set",
+			name);
 		close(s);
 		return 0;
 	}

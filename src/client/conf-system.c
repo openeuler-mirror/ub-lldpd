@@ -26,11 +26,11 @@ static int
 cmd_iface_pattern(struct lldpctl_conn_t *conn, struct writer *w,
     struct cmd_env *env, void *arg)
 {
-	log_debug("lldpctl", "set iface pattern");
+	log_debug("ub-lldpctl", "set iface pattern");
 
 	lldpctl_atom_t *config = lldpctl_get_configuration(conn);
 	if (config == NULL) {
-		log_warnx("lldpctl", "unable to get configuration from lldpd. %s",
+		log_warnx("ub-lldpctl", "unable to get configuration from ub-lldpd. %s",
 		    lldpctl_last_strerror(conn));
 		return 0;
 	}
@@ -39,12 +39,12 @@ cmd_iface_pattern(struct lldpctl_conn_t *conn, struct writer *w,
 	if (lldpctl_atom_set_str(config,
 		lldpctl_k_config_iface_pattern,
 		value) == NULL) {
-		log_warnx("lldpctl", "unable to set iface-pattern. %s",
+		log_warnx("ub-lldpctl", "unable to set iface-pattern. %s",
 		    lldpctl_last_strerror(conn));
 		lldpctl_atom_dec_ref(config);
 		return 0;
 	}
-	log_info("lldpctl", "iface-pattern set to new value %s",
+	log_info("ub-lldpctl", "iface-pattern set to new value %s",
 	    value?value:"(none)");
 	lldpctl_atom_dec_ref(config);
 	return 1;
@@ -54,11 +54,11 @@ static int
 cmd_perm_iface_pattern(struct lldpctl_conn_t *conn, struct writer *w,
     struct cmd_env *env, void *arg)
 {
-	log_debug("lldpctl", "set permanent iface pattern");
+	log_debug("ub-lldpctl", "set permanent iface pattern");
 
 	lldpctl_atom_t *config = lldpctl_get_configuration(conn);
 	if (config == NULL) {
-		log_warnx("lldpctl", "unable to get configuration from lldpd. %s",
+		log_warnx("ub-lldpctl", "unable to get configuration from ub-lldpd. %s",
 		    lldpctl_last_strerror(conn));
 		return 0;
 	}
@@ -67,12 +67,12 @@ cmd_perm_iface_pattern(struct lldpctl_conn_t *conn, struct writer *w,
 	if (lldpctl_atom_set_str(config,
 		lldpctl_k_config_perm_iface_pattern,
 		value) == NULL) {
-		log_warnx("lldpctl", "unable to set permanent iface pattern. %s",
+		log_warnx("ub-lldpctl", "unable to set permanent iface pattern. %s",
 		    lldpctl_last_strerror(conn));
 		lldpctl_atom_dec_ref(config);
 		return 0;
 	}
-	log_info("lldpctl", "permanent iface pattern set to new value %s",
+	log_info("ub-lldpctl", "permanent iface pattern set to new value %s",
 	    value?value:"(none)");
 	lldpctl_atom_dec_ref(config);
 	return 1;
@@ -84,20 +84,20 @@ cmd_iface_promisc(struct lldpctl_conn_t *conn, struct writer *w,
 {
 	lldpctl_atom_t *config = lldpctl_get_configuration(conn);
 	if (config == NULL) {
-		log_warnx("lldpctl", "unable to get configuration from lldpd. %s",
+		log_warnx("ub-lldpctl", "unable to get configuration from ub-lldpd. %s",
 		    lldpctl_last_strerror(conn));
 		return 0;
 	}
 	if (lldpctl_atom_set_int(config,
 		lldpctl_k_config_iface_promisc,
 		arg?1:0) == NULL) {
-		log_warnx("lldpctl", "unable to %s promiscuous mode: %s",
+		log_warnx("ub-lldpctl", "unable to %s promiscuous mode: %s",
 		    arg?"enable":"disable",
 		    lldpctl_last_strerror(conn));
 		lldpctl_atom_dec_ref(config);
 		return 0;
 	}
-	log_info("lldpctl", "interface promiscuous mode %s",
+	log_info("ub-lldpctl", "interface promiscuous mode %s",
 	    arg?"enabled":"disabled");
 	lldpctl_atom_dec_ref(config);
 	return 1;
@@ -116,22 +116,22 @@ cmd_system_description(struct lldpctl_conn_t *conn, struct writer *w,
 		value = cmdenv_get(env, "platform");
 		platform = 1;
 	}
-	log_debug("lldpctl", "set %s description", what);
+	log_debug("ub-lldpctl", "set %s description", what);
 	lldpctl_atom_t *config = lldpctl_get_configuration(conn);
 	if (config == NULL) {
-		log_warnx("lldpctl", "unable to get configuration from lldpd. %s",
+		log_warnx("ub-lldpctl", "unable to get configuration from ub-lldpd. %s",
 		    lldpctl_last_strerror(conn));
 		return 0;
 	}
 	if (lldpctl_atom_set_str(config,
 		platform?lldpctl_k_config_platform:lldpctl_k_config_description,
 		value) == NULL) {
-		log_warnx("lldpctl", "unable to set description. %s",
+		log_warnx("ub-lldpctl", "unable to set description. %s",
 		    lldpctl_last_strerror(conn));
 		lldpctl_atom_dec_ref(config);
 		return 0;
 	}
-	log_info("lldpctl", "description set to new value %s",
+	log_info("ub-lldpctl", "description set to new value %s",
 	    value?value:"(none)");
 	lldpctl_atom_dec_ref(config);
 	return 1;
@@ -143,22 +143,22 @@ cmd_system_chassisid(struct lldpctl_conn_t *conn, struct writer *w,
 {
 	const char *value;
 	value = cmdenv_get(env, "description");
-	log_debug("lldpctl", "set chassis ID");
+	log_debug("ub-lldpctl", "set chassis ID");
 	lldpctl_atom_t *config = lldpctl_get_configuration(conn);
 	if (config == NULL) {
-		log_warnx("lldpctl", "unable to get configuration from lldpd. %s",
+		log_warnx("ub-lldpctl", "unable to get configuration from ub-lldpd. %s",
 		    lldpctl_last_strerror(conn));
 		return 0;
 	}
 	if (lldpctl_atom_set_str(config,
 	    lldpctl_k_config_cid_string,
 	    value) == NULL) {
-		log_warnx("lldpctl", "unable to set chassis ID. %s",
+		log_warnx("ub-lldpctl", "unable to set chassis ID. %s",
 		    lldpctl_last_strerror(conn));
 		lldpctl_atom_dec_ref(config);
 		return 0;
 	}
-	log_info("lldpctl", "chassis ID set to new value %s",
+	log_info("ub-lldpctl", "chassis ID set to new value %s",
 	    value?value:"(none)");
 	lldpctl_atom_dec_ref(config);
 	return 1;
@@ -168,11 +168,11 @@ static int
 cmd_management(struct lldpctl_conn_t *conn, struct writer *w,
     struct cmd_env *env, void *arg)
 {
-	log_debug("lldpctl", "set management pattern");
+	log_debug("ub-lldpctl", "set management pattern");
 
 	lldpctl_atom_t *config = lldpctl_get_configuration(conn);
 	if (config == NULL) {
-		log_warnx("lldpctl", "unable to get configuration from lldpd. %s",
+		log_warnx("ub-lldpctl", "unable to get configuration from ub-lldpd. %s",
 		    lldpctl_last_strerror(conn));
 		return 0;
 	}
@@ -180,12 +180,12 @@ cmd_management(struct lldpctl_conn_t *conn, struct writer *w,
 	const char *value = cmdenv_get(env, "management-pattern");
 	if (lldpctl_atom_set_str(config,
 		lldpctl_k_config_mgmt_pattern, value) == NULL) {
-		log_warnx("lldpctl", "unable to set management pattern. %s",
+		log_warnx("ub-lldpctl", "unable to set management pattern. %s",
 		    lldpctl_last_strerror(conn));
 		lldpctl_atom_dec_ref(config);
 		return 0;
 	}
-	log_info("lldpctl", "management pattern set to new value %s",
+	log_info("ub-lldpctl", "management pattern set to new value %s",
 	    value?value:"(none)");
 	lldpctl_atom_dec_ref(config);
 	return 1;
@@ -196,11 +196,11 @@ cmd_hostname(struct lldpctl_conn_t *conn, struct writer *w,
     struct cmd_env *env, void *arg)
 {
 	struct utsname un;
-	log_debug("lldpctl", "set system name");
+	log_debug("ub-lldpctl", "set system name");
 
 	lldpctl_atom_t *config = lldpctl_get_configuration(conn);
 	if (config == NULL) {
-		log_warnx("lldpctl", "unable to get configuration from lldpd. %s",
+		log_warnx("ub-lldpctl", "unable to get configuration from ub-lldpd. %s",
 		    lldpctl_last_strerror(conn));
 		return 0;
 	}
@@ -208,7 +208,7 @@ cmd_hostname(struct lldpctl_conn_t *conn, struct writer *w,
 	const char *value = cmdenv_get(env, "hostname");
 	if (value && strlen(value) == 1 && value[0] == '.') {
 		if (uname(&un) < 0) {
-			log_warn("lldpctl", "cannot get node name");
+			log_warn("ub-lldpctl", "cannot get node name");
 			lldpctl_atom_dec_ref(config);
 			return 0;
 		}
@@ -216,12 +216,12 @@ cmd_hostname(struct lldpctl_conn_t *conn, struct writer *w,
 	}
 	if (lldpctl_atom_set_str(config,
 		lldpctl_k_config_hostname, value) == NULL) {
-		log_warnx("lldpctl", "unable to set system name. %s",
+		log_warnx("ub-lldpctl", "unable to set system name. %s",
 		    lldpctl_last_strerror(conn));
 		lldpctl_atom_dec_ref(config);
 		return 0;
 	}
-	log_info("lldpctl", "system name set to new value %s",
+	log_info("ub-lldpctl", "system name set to new value %s",
 	    value?value:"(none)");
 	lldpctl_atom_dec_ref(config);
 	return 1;
@@ -233,70 +233,22 @@ cmd_update_descriptions(struct lldpctl_conn_t *conn, struct writer *w,
 {
 	lldpctl_atom_t *config = lldpctl_get_configuration(conn);
 	if (config == NULL) {
-		log_warnx("lldpctl", "unable to get configuration from lldpd. %s",
+		log_warnx("ub-lldpctl", "unable to get configuration from ub-lldpd. %s",
 		    lldpctl_last_strerror(conn));
 		return 0;
 	}
 	if (lldpctl_atom_set_int(config,
 		lldpctl_k_config_ifdescr_update,
 		arg?1:0) == NULL) {
-		log_warnx("lldpctl", "unable to %s interface description update: %s",
+		log_warnx("ub-lldpctl", "unable to %s interface description update: %s",
 		    arg?"enable":"disable",
 		    lldpctl_last_strerror(conn));
 		lldpctl_atom_dec_ref(config);
 		return 0;
 	}
-	log_info("lldpctl", "interface description update %s",
+	log_info("ub-lldpctl", "interface description update %s",
 	    arg?"enabled":"disabled");
 	lldpctl_atom_dec_ref(config);
-	return 1;
-}
-
-static int
-cmd_bondslave_srcmac_type(struct lldpctl_conn_t *conn, struct writer *w,
-    struct cmd_env *env, void *arg)
-{
-	char *value_str;
-	int value = -1;
-
-	log_debug("lldpctl", "bond slave src mac");
-
-	lldpctl_atom_t *config = lldpctl_get_configuration(conn);
-	if (config == NULL) {
-		log_warnx("lldpctl",
-			"unable to get configuration from lldpd. %s",
-			lldpctl_last_strerror(conn));
-		return 0;
-	}
-
-	value_str = arg;
-	for (lldpctl_map_t *b_map =
-		lldpctl_key_get_map(lldpctl_k_config_bond_slave_src_mac_type);
-		b_map->string; b_map++) {
-		if (!strcmp(b_map->string, value_str)) {
-			value = b_map->value;
-			break;
-		}
-	}
-
-	if (value == -1) {
-		log_warnx("lldpctl", "invalid value");
-		lldpctl_atom_dec_ref(config);
-		return 0;
-	}
-
-	if (lldpctl_atom_set_int(config,
-		lldpctl_k_config_bond_slave_src_mac_type, value) == NULL) {
-		log_warnx("lldpctl", "unable to set bond slave src mac type."
-			" %s", lldpctl_last_strerror(conn));
-		lldpctl_atom_dec_ref(config);
-		return 0;
-	}
-
-	log_info("lldpctl", "bond slave src mac set to new value: %s",
-	    value_str);
-	lldpctl_atom_dec_ref(config);
-
 	return 1;
 }
 
@@ -304,76 +256,24 @@ static int
 cmd_maxneighs(struct lldpctl_conn_t *conn, struct writer *w,
     struct cmd_env *env, void *arg)
 {
-	log_debug("lldpctl", "set maximum neighbors");
+	log_debug("ub-lldpctl", "set maximum neighbors");
 
 	lldpctl_atom_t *config = lldpctl_get_configuration(conn);
 	if (config == NULL) {
-		log_warnx("lldpctl", "unable to get configuration from lldpd. %s",
+		log_warnx("ub-lldpctl", "unable to get configuration from ub-lldpd. %s",
 		    lldpctl_last_strerror(conn));
 		return 0;
 	}
 	if (lldpctl_atom_set_str(config,
 		lldpctl_k_config_max_neighbors, cmdenv_get(env, "max-neighbors")) == NULL) {
-		log_warnx("lldpctl", "unable to set maximum of neighbors. %s",
+		log_warnx("ub-lldpctl", "unable to set maximum of neighbors. %s",
 		    lldpctl_last_strerror(conn));
 		lldpctl_atom_dec_ref(config);
 		return 0;
 	}
-	log_info("lldpctl", "maximum neighbors set to new value %s", cmdenv_get(env, "max-neighbors"));
+	log_info("ub-lldpctl", "maximum neighbors set to new value %s", cmdenv_get(env, "max-neighbors"));
 	lldpctl_atom_dec_ref(config);
 	return 1;
-}
-
-/**
- * Register `configure system bond-slave-src-mac-type`
- */
-static void
-register_commands_srcmac_type(struct cmd_node *configure)
-{
-	struct cmd_node *bond_slave_src_mac_type =
-		commands_new(configure,
-			"bond-slave-src-mac-type",
-			"Set LLDP bond slave source MAC type",
-			NULL, NULL, NULL);
-
-	for (lldpctl_map_t *b_map =
-		lldpctl_key_get_map(lldpctl_k_config_bond_slave_src_mac_type);
-		b_map->string; b_map++) {
-		if (!strcmp(b_map->string, "real")) {
-			commands_new(
-				commands_new(bond_slave_src_mac_type,
-					b_map->string, "Real mac",
-					NULL, NULL, NULL),
-					NEWLINE, NULL,
-					NULL, cmd_bondslave_srcmac_type,
-					b_map->string);
-		} else if (!strcmp(b_map->string, "zero")) {
-			commands_new(
-				commands_new(bond_slave_src_mac_type,
-					b_map->string, "All zero mac",
-					NULL, NULL, NULL),
-					NEWLINE, NULL,
-					NULL, cmd_bondslave_srcmac_type,
-					b_map->string);
-		} else if (!strcmp(b_map->string, "fixed")) {
-			commands_new(
-				commands_new(bond_slave_src_mac_type,
-					b_map->string, "Fixed value (3Com card)",
-					NULL, NULL, NULL),
-					NEWLINE, NULL,
-					NULL, cmd_bondslave_srcmac_type,
-					b_map->string);
-		} else if (!strcmp(b_map->string, "local")) {
-			commands_new(
-				commands_new(bond_slave_src_mac_type,
-					b_map->string, "Real Mac with locally "
-					"administered bit set",
-					NULL, NULL, NULL),
-					NEWLINE, NULL,
-					NULL, cmd_bondslave_srcmac_type,
-					b_map->string);
-		}
-	}
 }
 
 /**
@@ -561,7 +461,5 @@ register_commands_configure_system(struct cmd_node *configure,
 		    NULL, NULL, NULL),
 		NEWLINE, "Don't enable promiscuous mode on managed interfaces",
 		NULL, cmd_iface_promisc, NULL);
-
-	register_commands_srcmac_type(configure_system);
 }
 

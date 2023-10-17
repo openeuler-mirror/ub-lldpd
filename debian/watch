@@ -1,3 +1,0 @@
-version=3
-opts=pgpsigurlmangle=s/$/.gpg/ \
-https://vincent.bernat.ch/en/projects .*/lldpd-([\d.]+).tar.gz

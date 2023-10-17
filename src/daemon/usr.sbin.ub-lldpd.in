@@ -1,6 +1,6 @@
 #include <tunables/global>
 
-@sbindir@/lldpd {
+@sbindir@/ub-lldpd {
   #include <abstractions/base>
   #include <abstractions/nameservice>
 
@@ -19,14 +19,14 @@
   # Need to receive/send raw packets
   network packet raw,
 
-  @sbindir@/lldpd mr,
+  @sbindir@/ub-lldpd mr,
   /run/systemd/notify w,
 
-  # Ability to run lldpcli for self-configuration
-  @sbindir@/lldpcli rix,
-  @sysconfdir@/lldpd.d/ r,
-  @sysconfdir@/lldpd.d/* r,
-  @sysconfdir@/lldpd.conf r,
+  # Ability to run ub-lldpcli for self-configuration
+  @sbindir@/ub-lldpcli rix,
+  @sysconfdir@/ub-lldpd.d/ r,
+  @sysconfdir@/ub-lldpd.d/* r,
+  @sysconfdir@/ub-lldpd.conf r,
 
   # PID file and socket
   @LLDPD_PID_FILE@ rw,

@@ -20,7 +20,7 @@
 
 #include "check-compat.h"
 #include "pcap-hdr.h"
-#include "../src/daemon/lldpd.h"
+#include "../src/daemon/ub-lldpd.h"
 
 struct packet {
 	TAILQ_ENTRY(packet) next;

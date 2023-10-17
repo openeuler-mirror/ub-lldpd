@@ -1,5 +1,6 @@
 /* -*- mode: c; c-file-style: "openbsd" -*- */
 /*
+ * Copyright (c) 2023-2023 Hisilicon Limited.
  * Copyright (c) 2012 Vincent Bernat <bernat@luffy.cx>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -26,12 +27,14 @@ void             log_warn(const char *, const char *, ...) __attribute__ ((forma
 void             log_warnx(const char *, const char *, ...) __attribute__ ((format (printf, 2, 3)));
 void             log_info(const char *, const char *, ...) __attribute__ ((format (printf, 2, 3)));
 void             log_debug(const char *, const char *, ...) __attribute__ ((format (printf, 2, 3)));
+void log_dfx(const char *, const char *, ...) __attribute__((format(printf, 2, 3)));
 void             fatal(const char*, const char *) __attribute__((__noreturn__));
 void             fatalx(const char *, const char *) __attribute__((__noreturn__));
 
 void		 log_register(void (*cb)(int, const char*));
 void             log_accept(const char *);
 void		 log_level(int);
+void log_dfx_enable(void);
 
 /* version.c */
 void		 version_display(FILE *, const char *, int);

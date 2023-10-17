@@ -2,6 +2,7 @@
 /*	$OpenBSD: log.c,v 1.11 2007/12/07 17:17:00 reyk Exp $	*/
 
 /*
+ * Copyright (c) 2023-2023 Hisilicon Limited.
  * Copyright (c) 2003, 2004 Henning Brauer <henning@openbsd.org>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -31,6 +32,9 @@
 static int	 use_syslog = 0;
 /* Default debug level */
 static int	 debug = 0;
+/* Default dfx level */
+static int dfx = 0;
+#define LOG_DFX 8
 
 /* Logging can be modified by providing an appropriate log handler. */
 static void (*logh)(int severity, const char *msg) = NULL;
@@ -116,6 +120,8 @@ translate(int fd, int priority)
 		case LOG_NOTICE:  return "\033[1;34m[NOTI";
 		case LOG_INFO:    return "\033[1;34m[INFO";
 		case LOG_DEBUG:   return "\033[36m[ DBG";
+		case LOG_DFX:
+			return "\033[32m[ DFX";
 		}
 		break;
 	default:
@@ -128,6 +134,8 @@ translate(int fd, int priority)
 		case LOG_NOTICE:  return "[NOTI";
 		case LOG_INFO:    return "[INFO";
 		case LOG_DEBUG:   return "[ DBG";
+		case LOG_DFX:
+			return "[ DFX";
 		}
 	}
 	return "[UNKN]";
@@ -244,6 +252,24 @@ log_debug(const char *token, const char *emsg, ...)
 	if ((debug > 1 && log_debug_accept_token(token)) || logh) {
 		va_start(ap, emsg);
 		vlog(LOG_DEBUG, token, emsg, ap);
+		va_end(ap);
+	}
+}
+
+void
+log_dfx_enable(void)
+{
+	dfx++;
+}
+
+void
+log_dfx(const char *token, const char *emsg, ...)
+{
+	va_list ap;
+
+	if ((dfx > 0 && log_debug_accept_token(token)) || logh) {
+		va_start(ap, emsg);
+		vlog(LOG_DFX, token, emsg, ap);
 		va_end(ap);
 	}
 }

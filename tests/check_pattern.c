@@ -17,7 +17,7 @@
 
 #include <check.h>
 
-#include "../src/daemon/lldpd.h"
+#include "../src/daemon/ub-lldpd.h"
 
 START_TEST(test_empty) {
 	ck_assert_int_eq(pattern_match("eth0", "", 0), 0);

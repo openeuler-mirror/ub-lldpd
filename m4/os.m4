@@ -18,12 +18,6 @@ AC_DEFUN([lldp_CHECK_OS], [
   AC_MSG_CHECKING([if host OS is supported])
 
   lldp_DEFINE_OS(linux*, Linux, LINUX)
-  lldp_DEFINE_OS(freebsd*|kfreebsd*, FreeBSD, FREEBSD)
-  lldp_DEFINE_OS(dragonfly*, [DragonFly BSD], DRAGONFLY)
-  lldp_DEFINE_OS(openbsd*, OpenBSD, OPENBSD)
-  lldp_DEFINE_OS(netbsd*, NetBSD, NETBSD)
-  lldp_DEFINE_OS(darwin*, macOS, OSX)
-  lldp_DEFINE_OS(solaris*, Solaris, SOLARIS)
 
   if test x"$os" = x; then
      AC_MSG_RESULT(no)

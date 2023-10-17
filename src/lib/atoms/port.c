@@ -29,11 +29,6 @@ static struct atom_map lldpd_protocol_map = {
 	.key = lldpctl_k_port_protocol,
 	.map = {
 		{ LLDPD_MODE_LLDP,	"LLDP" },
-		{ LLDPD_MODE_CDPV1,	"CDPv1"},
-		{ LLDPD_MODE_CDPV2,	"CDPv2"},
-		{ LLDPD_MODE_EDP,	"EDP" },
-		{ LLDPD_MODE_FDP,	"FDP"},
-		{ LLDPD_MODE_SONMP,	"SONMP"},
 		{ 0, NULL },
 	}
 };
@@ -63,156 +58,6 @@ static struct atom_map port_status_map = {
 };
 
 ATOM_MAP_REGISTER(port_status_map, 3);
-
-#ifdef ENABLE_DOT3
-static lldpctl_map_t operational_mau_type_values[] = {
-	{ LLDP_DOT3_MAU_AUI,		"AUI - No internal MAU, view from AUI" },
-	{ LLDP_DOT3_MAU_10BASE5,	"10Base5 - Thick coax MAU" },
-	{ LLDP_DOT3_MAU_FOIRL,		"Foirl - FOIRL MAU" },
-	{ LLDP_DOT3_MAU_10BASE2,	"10Base2 - Thin coax MAU" },
-	{ LLDP_DOT3_MAU_10BASET,	"10BaseT - UTP MAU" },
-	{ LLDP_DOT3_MAU_10BASEFP,	"10BaseFP - Passive fiber MAU" },
-	{ LLDP_DOT3_MAU_10BASEFB,	"10BaseFB - Sync fiber MAU" },
-	{ LLDP_DOT3_MAU_10BASEFL,	"10BaseFL - Async fiber MAU" },
-	{ LLDP_DOT3_MAU_10BROAD36,	"10Broad36 - Broadband DTE MAU" },
-	{ LLDP_DOT3_MAU_10BASETHD,	"10BaseTHD - UTP MAU, half duplex mode" },
-	{ LLDP_DOT3_MAU_10BASETFD,	"10BaseTFD - UTP MAU, full duplex mode" },
-	{ LLDP_DOT3_MAU_10BASEFLHD,	"10BaseFLHD - Async fiber MAU, half duplex mode" },
-	{ LLDP_DOT3_MAU_10BASEFLFD,	"10BaseFLDF - Async fiber MAU, full duplex mode" },
-	{ LLDP_DOT3_MAU_100BASET4,	"100BaseT4 - 4 pair category 3 UTP" },
-	{ LLDP_DOT3_MAU_100BASETXHD,	"100BaseTXHD - 2 pair category 5 UTP, half duplex mode" },
-	{ LLDP_DOT3_MAU_100BASETXFD,	"100BaseTXFD - 2 pair category 5 UTP, full duplex mode" },
-	{ LLDP_DOT3_MAU_100BASEFXHD,	"100BaseFXHD - X fiber over PMT, half duplex mode" },
-	{ LLDP_DOT3_MAU_100BASEFXFD,	"100BaseFXFD - X fiber over PMT, full duplex mode" },
-	{ LLDP_DOT3_MAU_100BASET2HD,	"100BaseT2HD - 2 pair category 3 UTP, half duplex mode" },
-	{ LLDP_DOT3_MAU_100BASET2FD,	"100BaseT2FD - 2 pair category 3 UTP, full duplex mode" },
-	{ LLDP_DOT3_MAU_1000BASEXHD,	"1000BaseXHD - PCS/PMA, unknown PMD, half duplex mode" },
-	{ LLDP_DOT3_MAU_1000BASEXFD,	"1000BaseXFD - PCS/PMA, unknown PMD, full duplex mode" },
-	{ LLDP_DOT3_MAU_1000BASELXHD,	"1000BaseLXHD - Fiber over long-wavelength laser, half duplex mode" },
-	{ LLDP_DOT3_MAU_1000BASELXFD,	"1000BaseLXFD - Fiber over long-wavelength laser, full duplex mode" },
-	{ LLDP_DOT3_MAU_1000BASESXHD,	"1000BaseSXHD - Fiber over short-wavelength laser, half duplex mode" },
-	{ LLDP_DOT3_MAU_1000BASESXFD,	"1000BaseSXFD - Fiber over short-wavelength laser, full duplex mode" },
-	{ LLDP_DOT3_MAU_1000BASECXHD,	"1000BaseCXHD - Copper over 150-Ohm balanced cable, half duplex mode" },
-	{ LLDP_DOT3_MAU_1000BASECXFD,	"1000BaseCXFD - Copper over 150-Ohm balanced cable, full duplex mode" },
-	{ LLDP_DOT3_MAU_1000BASETHD,	"1000BaseTHD - Four-pair Category 5 UTP, half duplex mode" },
-	{ LLDP_DOT3_MAU_1000BASETFD,	"1000BaseTFD - Four-pair Category 5 UTP, full duplex mode" },
-	{ LLDP_DOT3_MAU_10GIGBASEX,	"10GigBaseX - X PCS/PMA, unknown PMD." },
-	{ LLDP_DOT3_MAU_10GIGBASELX4,	"10GigBaseLX4 - X fiber over WWDM optics" },
-	{ LLDP_DOT3_MAU_10GIGBASER,	"10GigBaseR - R PCS/PMA, unknown PMD." },
-	{ LLDP_DOT3_MAU_10GIGBASEER,	"10GigBaseER - R fiber over 1550 nm optics" },
-	{ LLDP_DOT3_MAU_10GIGBASELR,	"10GigBaseLR - R fiber over 1310 nm optics" },
-	{ LLDP_DOT3_MAU_10GIGBASESR,	"10GigBaseSR - R fiber over 850 nm optics" },
-	{ LLDP_DOT3_MAU_10GIGBASEW,	"10GigBaseW - W PCS/PMA, unknown PMD." },
-	{ LLDP_DOT3_MAU_10GIGBASEEW,	"10GigBaseEW - W fiber over 1550 nm optics" },
-	{ LLDP_DOT3_MAU_10GIGBASELW,	"10GigBaseLW - W fiber over 1310 nm optics" },
-	{ LLDP_DOT3_MAU_10GIGBASESW,	"10GigBaseSW - W fiber over 850 nm optics" },
-	{ LLDP_DOT3_MAU_10GIGBASECX4,	"10GigBaseCX4 - X copper over 8 pair 100-Ohm balanced cable" },
-	{ LLDP_DOT3_MAU_2BASETL,	"2BaseTL - Voice grade UTP copper, up to 2700m, optional PAF" },
-	{ LLDP_DOT3_MAU_10PASSTS,	"10PassTS - Voice grade UTP copper, up to 750m, optional PAF" },
-	{ LLDP_DOT3_MAU_100BASEBX10D,	"100BaseBX10D - One single-mode fiber OLT, long wavelength, 10km" },
-	{ LLDP_DOT3_MAU_100BASEBX10U,	"100BaseBX10U - One single-mode fiber ONU, long wavelength, 10km" },
-	{ LLDP_DOT3_MAU_100BASELX10,	"100BaseLX10 - Two single-mode fibers, long wavelength, 10km" },
-	{ LLDP_DOT3_MAU_1000BASEBX10D,	"1000BaseBX10D - One single-mode fiber OLT, long wavelength, 10km" },
-	{ LLDP_DOT3_MAU_1000BASEBX10U,	"1000BaseBX10U - One single-mode fiber ONU, long wavelength, 10km" },
-	{ LLDP_DOT3_MAU_1000BASELX10,	"1000BaseLX10 - Two sigle-mode fiber, long wavelength, 10km" },
-	{ LLDP_DOT3_MAU_1000BASEPX10D,	"1000BasePX10D - One single-mode fiber EPON OLT, 10km" },
-	{ LLDP_DOT3_MAU_1000BASEPX10U,	"1000BasePX10U - One single-mode fiber EPON ONU, 10km" },
-	{ LLDP_DOT3_MAU_1000BASEPX20D,	"1000BasePX20D - One single-mode fiber EPON OLT, 20km" },
-	{ LLDP_DOT3_MAU_1000BASEPX20U,	"1000BasePX20U - One single-mode fiber EPON ONU, 20km" },
-	{ LLDP_DOT3_MAU_10GBASET,	"10GbaseT - Four-pair Category 6A or better, full duplex mode only" },
-	{ LLDP_DOT3_MAU_10GBASELRM,	"10GbaseLRM - R multimode fiber over 1310 nm optics" },
-	{ LLDP_DOT3_MAU_1000BASEKX,	"1000baseKX - X backplane, full duplex mode only" },
-	{ LLDP_DOT3_MAU_10GBASEKX4,	"10GbaseKX4 - 4 lane X backplane, full duplex mode only" },
-	{ LLDP_DOT3_MAU_10GBASEKR,	"10GbaseKR - R backplane, full duplex mode only" },
-	{ LLDP_DOT3_MAU_10G1GBASEPRXD1,	"10G1GbasePRXD1 - One single-mode fiber asymmetric-rate EPON OLT, low power budget (PRX10)" },
-	{ LLDP_DOT3_MAU_10G1GBASEPRXD2, "10G1GbasePRXD2 - One single-mode fiber asymmetric-rate EPON OLT, medium power budget (PRX20)" },
-	{ LLDP_DOT3_MAU_10G1GBASEPRXD3, "10G1GbasePRXD3 - One single-mode fiber asymmetric-rate EPON OLT, high power budget (PRX30)" },
-	{ LLDP_DOT3_MAU_10G1GBASEPRXU1, "10G1GbasePRXU1 - One single-mode fiber asymmetric-rate EPON ONU, low power budget (PRX10)" },
-	{ LLDP_DOT3_MAU_10G1GBASEPRXU2, "10G1GbasePRXU2 - One single-mode fiber asymmetric-rate EPON ONU, medium power budget (PRX20)" },
-	{ LLDP_DOT3_MAU_10G1GBASEPRXU3, "10G1GbasePRXU3 - One single-mode fiber asymmetric-rate EPON ONU, high power budget (PRX30)" },
-	{ LLDP_DOT3_MAU_10GBASEPRD1,	"10GbasePRD1 - One single-mode fiber symmetric-rate EPON OLT, low power budget (PR10)" },
-	{ LLDP_DOT3_MAU_10GBASEPRD2,	"10GbasePRD2 - One single-mode fiber symmetric-rate EPON OLT, medium power budget (PR20)" },
-	{ LLDP_DOT3_MAU_10GBASEPRD3,	"10GbasePRD3 - One single-mode fiber symmetric-rate EPON OLT, high power budget (PR30)" },
-	{ LLDP_DOT3_MAU_10GBASEPRU1,	"10GbasePRU1 - One single-mode fiber symmetric-rate EPON ONU, low and medium power budget" },
-	{ LLDP_DOT3_MAU_10GBASEPRU3,	"10GbasePRU3 - One single-mode fiber symmetric-rate EPON ONU, high power budget (PR30)" },
-	{ LLDP_DOT3_MAU_40GBASEKR4,	"40GbaseKR4 - 40GBASE-R PCS/PMA over an electrical backplane" },
-	{ LLDP_DOT3_MAU_40GBASECR4,	"40GbaseCR4 - 40GBASE-R PCS/PMA over 4 lane shielded copper balanced cable" },
-	{ LLDP_DOT3_MAU_40GBASESR4,	"40GbaseSR4 - 40GBASE-R PCS/PMA over 4 lane multimode fiber" },
-	{ LLDP_DOT3_MAU_40GBASEFR,	"40GbaseFR - 40GBASE-R PCS/PMA over single mode fiber" },
-	{ LLDP_DOT3_MAU_40GBASELR4,	"40GbaseLR4 - 40GBASE-R PCS/PMA over 4 WDM lane single mode fiber" },
-	{ LLDP_DOT3_MAU_100GBASECR10,   "100GbaseCR10 - 100GBASE-R PCS/PMA over 10 lane shielded copper balanced cable" },
-	{ LLDP_DOT3_MAU_100GBASESR10,   "100GbaseSR10 - 100GBASE-R PCS/PMA over 10 lane multimode fiber" },
-	{ LLDP_DOT3_MAU_100GBASELR4,	"100GbaseLR4 - 100GBASE-R PCS/PMA over 4 WDM lane single mode fiber, long reach" },
-	{ LLDP_DOT3_MAU_100GBASEER4,	"100GbaseER4 - 100GBASE-R PCS/PMA over 4 WDM lane single mode fiber PMD, extended reach" },
-	{ LLDP_DOT3_MAU_1000BASET1,	"1000baseT1 - 1000BASE-T1 single balanced twisted-pair copper cabling PHY" },
-	{ LLDP_DOT3_MAU_1000BASEPX30D,	"1000basePX30D - One single-mode fiber EPON OLT, 20km, 1:32 split ratio" },
-	{ LLDP_DOT3_MAU_1000BASEPX30U,	"1000basePX30U - One single-mode fiber EPON ONU, 20km, 1:32 split ratio" },
-	{ LLDP_DOT3_MAU_1000BASEPX40D,	"1000basePX40D - One single-mode fiber EPON OLT, 20km, 1:64 split ratio" },
-	{ LLDP_DOT3_MAU_1000BASEPX40U,	"1000basePX40U - One single-mode fiber EPON ONU, 20km, 1:64 split ratio" },
-	{ LLDP_DOT3_MAU_10G1GBASEPRXD4,	"10G1GbasePRXD4 - One single-mode fiber asymmetric-rate EPON OLT, supporting  extended power budget (PRX40)" },
-	{ LLDP_DOT3_MAU_10G1GBASEPRXU4,	"10G1GbasePRXU4 - One single-mode fiber asymmetric-rate EPON ONU, supporting  extended power budget (PRX40)" },
-	{ LLDP_DOT3_MAU_10GBASEPRD4,	"10GbasePRD4 - One single-mode fiber symmetric-rate EPON OLT, supporting  extended power budget (PR40)" },
-	{ LLDP_DOT3_MAU_10GBASEPRU4,	"10GbasePRU4 - One single-mode fiber symmetric-rate EPON ONU, supporting  extended power budget (PR40)" },
-	{ LLDP_DOT3_MAU_25GBASECR,	"25GbaseCR - 25GBASE-R PCS/PMA over shielded balanced copper cable" },
-	{ LLDP_DOT3_MAU_25GBASECRS,	"25GbaseCRS - 25GBASE-R PCS/PMA over shielded balanced copper cable  without RS-FEC" },
-	{ LLDP_DOT3_MAU_25GBASEKR,	"25GbaseKR - 25GBASE-R PCS/PMA over an electrical backplane" },
-	{ LLDP_DOT3_MAU_25GBASEKRS,	"25GbaseKRS - 25GBASE-R PCS/PMA over an electrical backplane without RS-FEC" },
-	{ LLDP_DOT3_MAU_25GBASER,	"25GbaseR - 25GBASE-R PCS/PMA over undefined PMD" },
-	{ LLDP_DOT3_MAU_25GBASESR,	"25GbaseSR - 25GBASE-R PCS/PMA over multimode fiber" },
-	{ LLDP_DOT3_MAU_25GBASET,	"25GbaseT - Four-pair twisted-pair balanced copper cabling" },
-	{ LLDP_DOT3_MAU_40GBASEER4,	"40GbaseER4 - 40GBASE-R PCS/PMA over 4 WDM lane single mode fiber" },
-	{ LLDP_DOT3_MAU_40GBASER,	"40GbaseR - 40GBASE-R PCS as over undefined PMA/PMD" },
-	{ LLDP_DOT3_MAU_40GBASET,	"40GbaseT - Four-pair twisted-pair balanced copper cabling" },
-	{ LLDP_DOT3_MAU_100GBASECR4,	"100GbaseCR4 - 100GBASE-R PCS/PMA over 4 lane shielded copper balanced cable" },
-	{ LLDP_DOT3_MAU_100GBASEKR4,	"100GbaseKR4 - 100GBASE-R PCS/PMA over an electrical backplane" },
-	{ LLDP_DOT3_MAU_100GBASEKP4,	"100GbaseKP4 - 100GBASE-P PCS/PMA over an electrical backplane PMD" },
-	{ LLDP_DOT3_MAU_100GBASER,	"100GbaseR - 100GBASE-R Multi-lane PCS over undefined PMA/PMD" },
-	{ LLDP_DOT3_MAU_100GBASESR4,	"100GbaseSR4 - 100GBASE-R PCS/PMA over 4 lane multimode fiber" },
-	{ LLDP_DOT3_MAU_2P5GIGT,	"2p5GigT - 2.5GBASE-T Four-pair twisted-pair balanced copper cabling PHY" },
-	{ LLDP_DOT3_MAU_5GIGT,		"5GigT - 5GBASE-T Four-pair twisted-pair balanced copper cabling PHY" },
-	{ LLDP_DOT3_MAU_100BASET1,	"100baseT1 - 100BASE-T1 Single balanced twisted-pair copper cabling PHY" },
-	{ LLDP_DOT3_MAU_1000BASERHA,	"1000baseRHA - 1000BASE-RHA Plastic optical fiber PHY" },
-	{ LLDP_DOT3_MAU_1000BASERHB,	"1000baseRHB - 1000BASE-RHB Plastic optical fiber PHY" },
-	{ LLDP_DOT3_MAU_1000BASERHC,	"1000baseRHC - 1000BASE-RHC Plastic optical fiber PHY" },
-	{ LLDP_DOT3_MAU_2P5GBASEKX,	"2p5GbaseKX - 2.5GBASE-X PMD over an electrical backplane" },
-	{ LLDP_DOT3_MAU_2P5GBASEX,	"2p5GbaseX - 2.5GBASE-X PCS/PMA over undefined PMD" },
-	{ LLDP_DOT3_MAU_5GBASEKR,	"5GbaseKR - 5GBASE-KR PMD over an electrical backplane" },
-	{ LLDP_DOT3_MAU_5GBASER,	"5GbaseR - 5GBASE-R PCS/PMA over undefined PMD" },
-	{ LLDP_DOT3_MAU_10GPASSXR,	"10GpassXR - Coax cable distribution network PHY continuous downstream/burst mode upstream PHY" },
-	{ LLDP_DOT3_MAU_25GBASELR,	"25GbaseLR - 25GBASE-R PCS/PMA over single-mode fiber PMD, with long reach" },
-	{ LLDP_DOT3_MAU_25GBASEER,	"25GbaseER - 25GBASE-R PCS/PMA over single-mode fiber PMD, with extended reach" },
-	{ LLDP_DOT3_MAU_50GBASER,	"50GbaseR - 50GBASE-R Multi-lane PCS over undefined PMA/PMD" },
-	{ LLDP_DOT3_MAU_50GBASECR,	"50GbaseCR - 50GBASE-R PCS/PMA over shielded copper balanced cable PMD" },
-	{ LLDP_DOT3_MAU_50GBASEKR,	"50GbaseKR - 50GBASE-R PCS/PMA over an electrical backplane PMD" },
-	{ LLDP_DOT3_MAU_50GBASESR,	"50GbaseSR - 50GBASE-R PCS/PMA over multimode fiber PMD" },
-	{ LLDP_DOT3_MAU_50GBASEFR,	"50GbaseFR - 50GBASE-R PCS/PMA over single mode fiber PMD with reach up to at least 2 km" },
-	{ LLDP_DOT3_MAU_50GBASELR,	"50GbaseLR - 50GBASE-R PCS/PMA over single mode fiber PMD with reach up to at least 10 km" },
-	{ LLDP_DOT3_MAU_50GBASEER,	"50GbaseER - 50GBASE-R PCS/PMA over single-mode fiber PMD with reach up to at least 40 km" },
-	{ LLDP_DOT3_MAU_100GBASECR2,	"100GbaseCR2 - 100GBASE-R PCS/PMA over 2 lane shielded copper balanced cable PMD" },
-	{ LLDP_DOT3_MAU_100GBASEKR2,	"100GbaseKR2 - 100GBASE-R PCS/PMA over an electrical backplane PMD" },
-	{ LLDP_DOT3_MAU_100GBASESR2,	"100GbaseSR2 - 100GBASE-R PCS/PMA over 2 lane multimode fiber PMD" },
-	{ LLDP_DOT3_MAU_100GBASEDR,	"100GbaseDR - 100GBASE-R PCS/PMA over single mode fiber PMD" },
-	{ LLDP_DOT3_MAU_200GBASER,	"200GbaseR - 200GBASE-R Multi-lane PCS over undefined PMA/PMD" },
-	{ LLDP_DOT3_MAU_200GBASEDR4,	"200GbaseDR4 - 200GBASE-R PCS/PMA over 4-lane single-mode fiber PMD" },
-	{ LLDP_DOT3_MAU_200GBASEFR4,	"200GbaseFR4 - 200GBASE-R PCS/PMA over 4 WDM lane single-mode fiber PMD with reach up to at least 2 km" },
-	{ LLDP_DOT3_MAU_200GBASELR4,	"200GbaseLR4 - 200GBASE-R PCS/PMA over 4 WDM lane single-mode fiber PMD with reach up to at least 10 km" },
-	{ LLDP_DOT3_MAU_200GBASECR4,	"200GbaseCR4 - 200GBASE-R PCS/PMA over 4 lane shielded copper balanced cable PMD" },
-	{ LLDP_DOT3_MAU_200GBASEKR4,	"200GbaseKR4 - 200GBASE-R PCS/PMA over an electrical backplane PMD" },
-	{ LLDP_DOT3_MAU_200GBASESR4,	"200GbaseSR4 - 200GBASE-R PCS/PMA over 4 lane multimode fiber PMD" },
-	{ LLDP_DOT3_MAU_200GBASEER4,	"200GbaseER4 - 200GBASE-R PCS/PMA over 4 WDM lane single-mode fiber PMD with reach up to at least 40 km" },
-	{ LLDP_DOT3_MAU_400GBASER,	"400GbaseR - 400GBASE-R Multi-lane PCS over undefined PMA/PMD" },
-	{ LLDP_DOT3_MAU_400GBASESR16,	"400GbaseSR16 - 400GBASE-R PCS/PMA over 16-lane multimode fiber PMD" },
-	{ LLDP_DOT3_MAU_400GBASEDR4,	"400GbaseDR4 - 400GBASE-R PCS/PMA over 4-lane single-mode fiber PMD" },
-	{ LLDP_DOT3_MAU_400GBASEFR8,	"400GbaseFR8 - 400GBASE-R PCS/PMA over 8 WDM lane single-mode fiber PMD with reach up to at least 2 km" },
-	{ LLDP_DOT3_MAU_400GBASELR8,	"400GbaseLR8 - 400GBASE-R PCS/PMA over 8 WDM lane single-mode fiber PMD with reach up to at least 10 km" },
-	{ LLDP_DOT3_MAU_400GBASEER8,	"400GbaseER8 - 400GBASE-R PCS/PMA over 8 WDM lane single-mode fiber PMD with reach up to at least 40 km" },
-	{ LLDP_DOT3_MAU_10BASET1L,	"10baseT1L - 10BASE-T1L Single balanced pair PHY" },
-	{ LLDP_DOT3_MAU_10BASET1SHD,	"10baseT1SHD - 10BASE-T1S Single balanced pair PHY, half duplex mode" },
-	{ LLDP_DOT3_MAU_10BASET1SMD,	"10baseT1SMD - 10BASE-T1S Single balanced pair PHY, multidrop mode" },
-	{ LLDP_DOT3_MAU_10BASET1SFD,	"10baseT1SFD - 10BASE-T1S Single balanced pair PHY, full duplex mode" },
-	{ 0, NULL }
-};
-#endif
 
 static lldpctl_atom_iter_t*
 _lldpctl_atom_iter_ports_list(lldpctl_atom_t *atom)
@@ -348,36 +193,6 @@ _lldpctl_atom_get_atom_port(lldpctl_atom_t *atom, lldpctl_key_t key)
 		}
 		SET_ERROR(atom->conn, LLDPCTL_ERR_NOT_EXIST);
 		return NULL;
-#ifdef ENABLE_DOT3
-	case lldpctl_k_port_dot3_power:
-		return _lldpctl_new_atom(atom->conn, atom_dot3_power,
-		    p);
-#endif
-#ifdef ENABLE_DOT1
-	case lldpctl_k_port_vlans:
-		return _lldpctl_new_atom(atom->conn, atom_vlans_list,
-		    p);
-	case lldpctl_k_port_ppvids:
-		return _lldpctl_new_atom(atom->conn, atom_ppvids_list,
-		    p);
-	case lldpctl_k_port_pis:
-		return _lldpctl_new_atom(atom->conn, atom_pis_list,
-		    p);
-#endif
-#ifdef ENABLE_LLDPMED
-	case lldpctl_k_port_med_policies:
-		return _lldpctl_new_atom(atom->conn, atom_med_policies_list,
-		    p);
-	case lldpctl_k_port_med_locations:
-		return _lldpctl_new_atom(atom->conn, atom_med_locations_list,
-		    p);
-	case lldpctl_k_port_med_power:
-		return _lldpctl_new_atom(atom->conn, atom_med_power, p);
-#endif
-#ifdef ENABLE_CUSTOM
-	case lldpctl_k_custom_tlvs:
-		return _lldpctl_new_atom(atom->conn, atom_custom_list, p);
-#endif
 	default:
 		/* Compatibility: query the associated chassis too */
 		if (port->p_chassis)
@@ -397,25 +212,11 @@ _lldpctl_atom_set_atom_port(lldpctl_atom_t *atom, lldpctl_key_t key, lldpctl_ato
 	int rc;
 	char *canary = NULL;
 
-#ifdef ENABLE_DOT3
-	struct _lldpctl_atom_dot3_power_t *dpow;
-#endif
-#ifdef ENABLE_LLDPMED
-	struct _lldpctl_atom_med_power_t *mpow;
-	struct _lldpctl_atom_med_policy_t *mpol;
-	struct _lldpctl_atom_med_location_t *mloc;
-#endif
-#ifdef ENABLE_CUSTOM
-	struct _lldpctl_atom_custom_t    *custom;
-#endif
-
 	/* Local and default port only */
 	if (!p->local) {
 		SET_ERROR(atom->conn, LLDPCTL_ERR_NOT_EXIST);
 		return NULL;
 	}
-
-	set.vlan_tx_enabled = -1;
 
 	switch (key) {
 	case lldpctl_k_port_id:
@@ -427,62 +228,6 @@ _lldpctl_atom_set_atom_port(lldpctl_atom_t *atom, lldpctl_key_t key, lldpctl_ato
 	case lldpctl_k_port_status:
 		set.rxtx = LLDPD_RXTX_FROM_PORT(p->port);
 		break;
-	case lldpctl_k_port_vlan_tx:
-		set.vlan_tx_tag = p->port->p_vlan_tx_tag;
-		set.vlan_tx_enabled = p->port->p_vlan_tx_enabled;
-		break;
-#ifdef ENABLE_DOT3
-	case lldpctl_k_port_dot3_power:
-		if (value->type != atom_dot3_power) {
-			SET_ERROR(atom->conn, LLDPCTL_ERR_INCORRECT_ATOM_TYPE);
-			return NULL;
-		}
-
-		dpow = (struct _lldpctl_atom_dot3_power_t *)value;
-		set.dot3_power = &dpow->parent->port->p_power;
-		break;
-#endif
-#ifdef ENABLE_LLDPMED
-	case lldpctl_k_port_med_power:
-		if (value->type != atom_med_power) {
-			SET_ERROR(atom->conn, LLDPCTL_ERR_INCORRECT_ATOM_TYPE);
-			return NULL;
-		}
-
-		mpow = (struct _lldpctl_atom_med_power_t *)value;
-		set.med_power = &mpow->parent->port->p_med_power;
-		break;
-	case lldpctl_k_port_med_policies:
-		if (value->type != atom_med_policy) {
-			SET_ERROR(atom->conn, LLDPCTL_ERR_INCORRECT_ATOM_TYPE);
-			return NULL;
-		}
-		mpol = (struct _lldpctl_atom_med_policy_t *)value;
-		set.med_policy = mpol->policy;
-		break;
-	case lldpctl_k_port_med_locations:
-		if (value->type != atom_med_location) {
-			SET_ERROR(atom->conn, LLDPCTL_ERR_INCORRECT_ATOM_TYPE);
-			return NULL;
-		}
-		mloc = (struct _lldpctl_atom_med_location_t *)value;
-		set.med_location = mloc->location;
-		break;
-#endif
-#ifdef ENABLE_CUSTOM
-	case lldpctl_k_custom_tlvs_clear:
-		set.custom_list_clear = 1;
-		break;
-	case lldpctl_k_custom_tlv:
-		if (value->type != atom_custom) {
-			SET_ERROR(atom->conn, LLDPCTL_ERR_INCORRECT_ATOM_TYPE);
-			return NULL;
-		}
-		custom = (struct _lldpctl_atom_custom_t *)value;
-		set.custom = custom->tlv;
-		set.custom_tlv_op = custom->op;
-		break;
-#endif
 	default:
 		SET_ERROR(atom->conn, LLDPCTL_ERR_NOT_EXIST);
 		return NULL;
@@ -566,12 +311,6 @@ _lldpctl_atom_get_str_port(lldpctl_atom_t *atom, lldpctl_key_t key)
 	case lldpctl_k_port_descr:
 		return port->p_descr;
 
-#ifdef ENABLE_DOT3
-	case lldpctl_k_port_dot3_mautype:
-		return map_lookup(operational_mau_type_values,
-		    port->p_macphy.mau_type);
-#endif
-
 	default:
 		/* Compatibility: query the associated chassis too */
 		return lldpctl_atom_get_str(p->chassis, key);
@@ -591,13 +330,6 @@ _lldpctl_atom_set_int_port(lldpctl_atom_t *atom, lldpctl_key_t key,
 		case lldpctl_k_port_status:
 			port->p_disable_rx = !LLDPD_RXTX_RXENABLED(value);
 			port->p_disable_tx = !LLDPD_RXTX_TXENABLED(value);
-			break;
-		case lldpctl_k_port_vlan_tx:
-			if (value > -1) {
-				port->p_vlan_tx_tag = value;
-				port->p_vlan_tx_enabled = 1;
-			} else
-				port->p_vlan_tx_enabled = 0;
 			break;
 		default:
 			SET_ERROR(atom->conn, LLDPCTL_ERR_NOT_EXIST);
@@ -701,30 +433,6 @@ _lldpctl_atom_get_int_port(lldpctl_atom_t *atom, lldpctl_key_t key)
 		return port->p_id_subtype;
 	case lldpctl_k_port_hidden:
 		return port->p_hidden_in;
-	case lldpctl_k_port_vlan_tx:
-		return port->p_vlan_tx_enabled ? port->p_vlan_tx_tag : -1;
-#ifdef ENABLE_DOT3
-	case lldpctl_k_port_dot3_mfs:
-		if (port->p_mfs > 0)
-			return port->p_mfs;
-		break;
-	case lldpctl_k_port_dot3_aggregid:
-		if (port->p_aggregid > 0)
-			return port->p_aggregid;
-		break;
-	case lldpctl_k_port_dot3_autoneg_support:
-		return port->p_macphy.autoneg_support;
-	case lldpctl_k_port_dot3_autoneg_enabled:
-		return port->p_macphy.autoneg_enabled;
-	case lldpctl_k_port_dot3_autoneg_advertised:
-		return port->p_macphy.autoneg_advertised;
-	case lldpctl_k_port_dot3_mautype:
-		return port->p_macphy.mau_type;
-#endif
-#ifdef ENABLE_DOT1
-	case lldpctl_k_port_vlan_pvid:
-		return port->p_pvid;
-#endif
 	default:
 		/* Compatibility: query the associated chassis too */
 		return lldpctl_atom_get_int(p->chassis, key);

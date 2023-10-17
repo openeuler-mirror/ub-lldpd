@@ -7,10 +7,10 @@
 # Configure autoconf
 AC_PREREQ([2.69])
 
-AC_INIT([lldpd],
+AC_INIT([ub-lldpd],
         [m4_esyscmd_s([./get-version])],
         [https://github.com/lldpd/lldpd/issues],
-        [lldpd],
+        [ub-lldpd],
         [https://lldpd.github.io/])
 
 AC_CONFIG_SRCDIR([src/log.c])
@@ -19,10 +19,9 @@ AC_CONFIG_FILES([Makefile
                  src/Makefile
                  src/compat/Makefile
                  src/daemon/Makefile
-		 src/lib/Makefile
+                 src/lib/Makefile
                  src/client/Makefile
-	         tests/Makefile
-                 osx/Makefile])
+	         tests/Makefile])
 AC_CONFIG_MACRO_DIR([m4])
 AC_SUBST([CONFIGURE_ARGS], [$ac_configure_args])
 
@@ -68,7 +67,7 @@ DX_RTF_FEATURE(OFF)
 DX_XML_FEATURE(OFF)
 DX_PDF_FEATURE(ON)
 DX_PS_FEATURE(OFF)
-DX_INIT_DOXYGEN([lldpd], [doxygen.cfg], [doxygen])
+DX_INIT_DOXYGEN([ub-lldpd], [doxygen.cfg], [doxygen])
 
 # Check some compiler flags
 AX_CFLAGS_GCC_OPTION([-Wunknown-warning-option], [LLDP_CFLAGS])
@@ -280,15 +279,6 @@ else
    ax_cv_lib_readline="no"
 fi
 
-# SNMP
-AC_ARG_WITH([snmp],
-  AS_HELP_STRING(
-    [--with-snmp],
-    [Enable the use of SNMP @<:@default=no@:>@]),
-  [],
-  [with_snmp=no])
-lldp_CHECK_SNMP
-
 # XML
 AC_ARG_WITH([xml],
   AS_HELP_STRING(
@@ -343,34 +333,22 @@ lldp_SYSTEMTAP
 
 # Privsep settings
 lldp_ARG_ENABLE([privsep], [Privilege separation], [yes])
-lldp_ARG_WITH([privsep-user], [Which user to use for privilege separation], [_lldpd])
-lldp_ARG_WITH([privsep-group], [Which group to use for privilege separation], [_lldpd])
+lldp_ARG_WITH([privsep-user], [Which user to use for privilege separation], [_ub_lldpd])
+lldp_ARG_WITH([privsep-group], [Which group to use for privilege separation], [_ub_lldpd])
 
 # Directories
 dnl On autoconf 2.69 and before, runstatedir is not configurable, let be able to use it anyway
 if test "x$runstatedir" = x; then
     AC_SUBST([runstatedir], ['${localstatedir}/run'])
 fi
-lldp_ARG_WITH([privsep-chroot], [Which directory to use to chroot lldpd], [${runstatedir}/lldpd])
-lldp_ARG_WITH([lldpd-ctl-socket], [Path to socket for communication with lldpd], [${runstatedir}/lldpd.socket])
-lldp_ARG_WITH([lldpd-pid-file], [Path to lldpd PID file], [${runstatedir}/lldpd.pid])
+lldp_ARG_WITH([privsep-chroot], [Which directory to use to chroot ub-lldpd], [${runstatedir}/ub-lldpd])
+lldp_ARG_WITH([lldpd-ctl-socket], [Path to socket for communication with ub-lldpd], [${runstatedir}/ub-lldpd.socket])
+lldp_ARG_WITH([lldpd-pid-file], [Path to ub-lldpd PID file], [${runstatedir}/ub-lldpd.pid])
 
 # Netlink
 lldp_ARG_WITH_UNQUOTED([netlink-max-receive-bufsize], [Netlink maximum receive buffer size], [1024*1024])
 lldp_ARG_WITH_UNQUOTED([netlink-receive-bufsize], [Netlink initial receive buffer size], [0])
 lldp_ARG_WITH_UNQUOTED([netlink-send-bufsize], [Netlink send buffer size], [0])
-
-# CDP/FDP/EDP/SONMP
-lldp_ARG_ENABLE([cdp], [Cisco Discovery Protocol], [yes])
-lldp_ARG_ENABLE([fdp], [Foundry Discovery Protocol], [yes])
-lldp_ARG_ENABLE([edp], [Extreme Discovery Protocol], [yes])
-lldp_ARG_ENABLE([sonmp], [SynOptics Network Management Protocol], [yes])
-
-# LLDPMED/Dot1/Dot3
-lldp_ARG_ENABLE([lldpmed], [LLDP-MED extension], [yes])
-lldp_ARG_ENABLE([dot1], [Dot1 extension (VLAN stuff)], [yes])
-lldp_ARG_ENABLE([dot3], [Dot3 extension (PHY stuff)], [yes])
-lldp_ARG_ENABLE([custom], [Custom TLV support], [yes])
 
 # Oldies
 MIN_LINUX_KERNEL_VERSION=2.6.39
@@ -403,7 +381,6 @@ AC_SUBST([LLDP_CPPFLAGS])
 AC_SUBST([LLDP_LDFLAGS])
 AC_SUBST([LLDP_BIN_LDFLAGS])
 AM_CONDITIONAL([HAVE_CHECK], [test x"$have_check" = x"yes"])
-AM_CONDITIONAL([USE_SNMP], [test x"$with_snmp" = x"yes"])
 AM_CONDITIONAL([USE_XML], [test x"$with_xml" = x"yes"])
 AM_CONDITIONAL([USE_SECCOMP], [test x"$with_seccomp" = x"yes"])
 dnl If old default of AR_FLAGS is otherwise being used (because of older automake),
@@ -431,17 +408,7 @@ cat <<EOF
   Readline.......: ${ax_cv_lib_readline}
 
  Optional features:
-  SNMP support...: ${with_snmp-no}
-  CDP............: $enable_cdp
-  FDP............: $enable_fdp
-  EDP............: $enable_edp
-  SONMP..........: $enable_sonmp
-  LLDPMED........: $enable_lldpmed
-  DOT1...........: $enable_dot1
-  DOT3...........: $enable_dot3
-  CUSTOM.........: $enable_custom
   XML output.....: ${with_xml-no}
-  Oldies support.: $enable_oldies
   seccomp........: ${with_seccomp-no}
   libbsd.........: ${with_libbsd-no}
 

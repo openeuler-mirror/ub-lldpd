@@ -42,116 +42,6 @@
 #include "marshal.h"
 #include "lldp-const.h"
 
-#ifdef ENABLE_DOT1
-struct lldpd_ppvid {
-	TAILQ_ENTRY(lldpd_ppvid) p_entries;
-	u_int8_t		p_cap_status;
-	u_int16_t		p_ppvid;
-};
-MARSHAL_BEGIN(lldpd_ppvid)
-MARSHAL_TQE(lldpd_ppvid, p_entries)
-MARSHAL_END(lldpd_ppvid);
-
-struct lldpd_vlan {
-	TAILQ_ENTRY(lldpd_vlan)  v_entries;
-	char			*v_name;
-	u_int16_t		 v_vid;
-};
-MARSHAL_BEGIN(lldpd_vlan)
-MARSHAL_TQE(lldpd_vlan, v_entries)
-MARSHAL_STR(lldpd_vlan, v_name)
-MARSHAL_END(lldpd_vlan);
-
-struct lldpd_pi {
-	TAILQ_ENTRY(lldpd_pi)  p_entries;
-	char			*p_pi;
-	int			 p_pi_len;
-};
-MARSHAL_BEGIN(lldpd_pi)
-MARSHAL_TQE(lldpd_pi, p_entries)
-MARSHAL_FSTR(lldpd_pi, p_pi, p_pi_len)
-MARSHAL_END(lldpd_pi);
-#endif
-
-#ifdef ENABLE_LLDPMED
-struct lldpd_med_policy {
-	u_int8_t		 index; /* Not used. */
-	u_int8_t		 type;
-	u_int8_t		 unknown;
-	u_int8_t		 tagged;
-	u_int16_t		 vid;
-	u_int8_t		 priority;
-	u_int8_t		 dscp;
-};
-MARSHAL(lldpd_med_policy);
-
-struct lldpd_med_loc {
-	u_int8_t		 index; /* Not used. */
-	u_int8_t		 format;
-	char			*data;
-	int			 data_len;
-};
-MARSHAL_BEGIN(lldpd_med_loc)
-MARSHAL_FSTR(lldpd_med_loc, data, data_len)
-MARSHAL_END(lldpd_med_loc);
-
-struct lldpd_med_power {
-	u_int8_t		 devicetype; /* PD or PSE */
-	u_int8_t		 source;
-	u_int8_t		 priority;
-	u_int16_t		 val;
-};
-MARSHAL(lldpd_med_power);
-#endif
-
-#ifdef ENABLE_DOT3
-struct lldpd_dot3_macphy {
-	u_int8_t		 autoneg_support;
-	u_int8_t		 autoneg_enabled;
-	u_int16_t		 autoneg_advertised;
-	u_int16_t		 mau_type;
-};
-
-struct lldpd_dot3_power {
-	u_int8_t		devicetype;
-	u_int8_t		supported;
-	u_int8_t		enabled;
-	u_int8_t		paircontrol;
-	u_int8_t		pairs;
-	u_int8_t		class;
-	u_int8_t		powertype; /* If set to LLDP_DOT3_POWER_8023AT_OFF,
-					      following fields have no meaning */
-	u_int8_t		source;
-	u_int8_t		priority;
-	u_int16_t		requested;
-	u_int16_t		allocated;
-
-	/* For 802.3BT */
-	u_int8_t		pd_4pid;
-	u_int16_t		requested_a;
-	u_int16_t		requested_b;
-	u_int16_t		allocated_a;
-	u_int16_t		allocated_b;
-	u_int16_t		pse_status;
-	u_int8_t		pd_status;
-	u_int8_t		pse_pairs_ext;
-	u_int8_t		class_a;
-	u_int8_t		class_b;
-	u_int8_t		class_ext;
-	u_int8_t		type_ext;
-	u_int8_t		pd_load;
-	u_int16_t		pse_max;
-};
-MARSHAL(lldpd_dot3_power);
-#endif
-
-#if defined ENABLE_CDP || defined ENABLE_FDP
-struct cdpv2_power {
-	u_int16_t request_id;
-	u_int16_t management_id;
-};
-#endif
-
 enum {
 	LLDPD_AF_UNSPEC = 0,
 	LLDPD_AF_IPV4,
@@ -191,19 +81,6 @@ struct lldpd_chassis {
 	u_int16_t		 c_cap_enabled;
 
 	TAILQ_HEAD(, lldpd_mgmt) c_mgmt;
-
-#ifdef ENABLE_LLDPMED
-	u_int16_t		 c_med_cap_available;
-	u_int8_t		 c_med_type;
-	char			*c_med_hw;
-	char			*c_med_fw;
-	char			*c_med_sw;
-	char			*c_med_sn;
-	char			*c_med_manuf;
-	char			*c_med_model;
-	char			*c_med_asset;
-#endif
-
 };
 /* WARNING: any change to this structure should also be reflected into
    `lldpd_copy_chassis()` which is not using marshaling. */
@@ -214,41 +91,7 @@ MARSHAL_FSTR(lldpd_chassis, c_id, c_id_len)
 MARSHAL_STR(lldpd_chassis, c_name)
 MARSHAL_STR(lldpd_chassis, c_descr)
 MARSHAL_SUBTQ(lldpd_chassis, lldpd_mgmt, c_mgmt)
-#ifdef ENABLE_LLDPMED
-MARSHAL_STR(lldpd_chassis, c_med_hw)
-MARSHAL_STR(lldpd_chassis, c_med_fw)
-MARSHAL_STR(lldpd_chassis, c_med_sw)
-MARSHAL_STR(lldpd_chassis, c_med_sn)
-MARSHAL_STR(lldpd_chassis, c_med_manuf)
-MARSHAL_STR(lldpd_chassis, c_med_model)
-MARSHAL_STR(lldpd_chassis, c_med_asset)
-#endif
 MARSHAL_END(lldpd_chassis);
-
-#ifdef ENABLE_CUSTOM
-
-#define CUSTOM_TLV_ADD 		1
-#define CUSTOM_TLV_REPLACE	2
-#define CUSTOM_TLV_REMOVE	3
-
-/* Custom TLV struct as defined on page 35 of IEEE 802.1AB-2005 */
-struct lldpd_custom {
-	TAILQ_ENTRY(lldpd_custom)	next;	/* Pointer to next custom TLV */
-
-	/* Organizationally Unique Identifier */
-	u_int8_t		oui[LLDP_TLV_ORG_OUI_LEN];
-	/* Organizationally Defined Subtype */
-	u_int8_t		subtype;
-	/* Organizationally Defined Information String */
-	u_int8_t		*oui_info;
-	/* Organizationally Defined Information String length */
-	int			oui_info_len;
-};
-MARSHAL_BEGIN(lldpd_custom)
-MARSHAL_TQE(lldpd_custom, next)
-MARSHAL_FSTR(lldpd_custom, oui_info, oui_info_len)
-MARSHAL_END(lldpd_custom);
-#endif
 
 struct lldpd_port {
 	TAILQ_ENTRY(lldpd_port)	 p_entries;
@@ -274,36 +117,7 @@ struct lldpd_port {
 	int			 p_descr_force; /* Description has been forced by user */
 	u_int16_t		 p_mfs;
 	u_int16_t		 p_ttl; /* TTL for remote port */
-	int			 p_vlan_tx_tag;
-	int			 p_vlan_tx_enabled;
 
-#ifdef ENABLE_DOT3
-	/* Dot3 stuff */
-	u_int32_t		 p_aggregid;
-	struct lldpd_dot3_macphy p_macphy;
-	struct lldpd_dot3_power	 p_power;
-#endif
-
-#ifdef ENABLE_LLDPMED
-	u_int16_t		 p_med_cap_enabled;
-	struct lldpd_med_policy	 p_med_policy[LLDP_MED_APPTYPE_LAST];
-	struct lldpd_med_loc	 p_med_location[LLDP_MED_LOCFORMAT_LAST];
-	struct lldpd_med_power	 p_med_power;
-#endif
-
-#if defined ENABLE_CDP || defined ENABLE_FDP
-	struct cdpv2_power p_cdp_power;
-#endif
-
-#ifdef ENABLE_DOT1
-	u_int16_t		 p_pvid;
-	TAILQ_HEAD(, lldpd_vlan) p_vlans;
-	TAILQ_HEAD(, lldpd_ppvid) p_ppvids;
-	TAILQ_HEAD(, lldpd_pi)	  p_pids;
-#endif
-#ifdef ENABLE_CUSTOM
-	TAILQ_HEAD(, lldpd_custom) p_custom_list;
-#endif
 };
 MARSHAL_BEGIN(lldpd_port)
 MARSHAL_TQE(lldpd_port, p_entries)
@@ -311,19 +125,6 @@ MARSHAL_POINTER(lldpd_port, lldpd_chassis, p_chassis)
 MARSHAL_IGNORE(lldpd_port, p_lastframe)
 MARSHAL_FSTR(lldpd_port, p_id, p_id_len)
 MARSHAL_STR(lldpd_port, p_descr)
-#ifdef ENABLE_LLDPMED
-MARSHAL_SUBSTRUCT(lldpd_port, lldpd_med_loc, p_med_location[0])
-MARSHAL_SUBSTRUCT(lldpd_port, lldpd_med_loc, p_med_location[1])
-MARSHAL_SUBSTRUCT(lldpd_port, lldpd_med_loc, p_med_location[2])
-#endif
-#ifdef ENABLE_DOT1
-MARSHAL_SUBTQ(lldpd_port, lldpd_vlan, p_vlans)
-MARSHAL_SUBTQ(lldpd_port, lldpd_ppvid, p_ppvids)
-MARSHAL_SUBTQ(lldpd_port, lldpd_pi, p_pids)
-#endif
-#ifdef ENABLE_CUSTOM
-MARSHAL_SUBTQ(lldpd_port, lldpd_custom, p_custom_list)
-#endif
 MARSHAL_END(lldpd_port);
 
 /* Used to modify some port related settings */
@@ -343,37 +144,11 @@ struct lldpd_port_set {
 	char *local_id;
 	char *local_descr;
 	int rxtx;
-	int vlan_tx_tag;
-	int vlan_tx_enabled;
-#ifdef ENABLE_LLDPMED
-	struct lldpd_med_policy *med_policy;
-	struct lldpd_med_loc    *med_location;
-	struct lldpd_med_power  *med_power;
-#endif
-#ifdef ENABLE_DOT3
-	struct lldpd_dot3_power *dot3_power;
-#endif
-#ifdef ENABLE_CUSTOM
-	struct lldpd_custom     *custom;
-	int custom_list_clear;
-	int custom_tlv_op;
-#endif
 };
 MARSHAL_BEGIN(lldpd_port_set)
 MARSHAL_STR(lldpd_port_set, ifname)
 MARSHAL_STR(lldpd_port_set, local_id)
 MARSHAL_STR(lldpd_port_set, local_descr)
-#ifdef ENABLE_LLDPMED
-MARSHAL_POINTER(lldpd_port_set, lldpd_med_policy, med_policy)
-MARSHAL_POINTER(lldpd_port_set, lldpd_med_loc,    med_location)
-MARSHAL_POINTER(lldpd_port_set, lldpd_med_power,  med_power)
-#endif
-#ifdef ENABLE_DOT3
-MARSHAL_POINTER(lldpd_port_set, lldpd_dot3_power, dot3_power)
-#endif
-#ifdef ENABLE_CUSTOM
-MARSHAL_POINTER(lldpd_port_set, lldpd_custom,     custom)
-#endif
 MARSHAL_END(lldpd_port_set);
 
 /* Smart mode / Hide mode */
@@ -413,17 +188,8 @@ struct lldpd_config {
 	int c_cap_advertise;	 /* Chassis capabilities advertisement */
 	int c_mgmt_advertise;	 /* Management addresses advertisement */
 
-#ifdef ENABLE_LLDPMED
-	int c_noinventory;	/* Don't send inventory with LLDP-MED */
-	int c_enable_fast_start; /* enable fast start */
-	int c_tx_fast_init;	/* Num of lldpd lldppdu's for fast start */
-	int c_tx_fast_interval;	/* Time intr between sends during fast start */
-#endif
 	int c_tx_hold;		/* Transmit hold */
-	int c_bond_slave_src_mac_type; /* Src mac type in lldp frames over bond
-					  slaves */
 	int c_lldp_portid_type; /* The PortID type */
-	int c_lldp_agent_type;	/* The agent type */
 };
 MARSHAL_BEGIN(lldpd_config)
 MARSHAL_STR(lldpd_config, c_mgmt_pattern)
@@ -463,7 +229,6 @@ struct lldpd_hardware {
 	struct lldpd		*h_cfg;	    /* Pointer to main configuration */
 	void			*h_recv;    /* FD for reception */
 	int			 h_sendfd;  /* FD for sending, only used by h_ops */
-	int			 h_mangle;  /* 1 if we have to mangle the MAC address */
 	struct lldpd_ops	*h_ops;	    /* Hardware-dependent functions */
 	void			*h_data;    /* Hardware-dependent data */
 	void			*h_timer;   /* Timer for this port */
@@ -505,10 +270,6 @@ struct lldpd_hardware {
 
 	struct lldpd_port	 h_lport;  /* Port attached to this hardware port */
 	TAILQ_HEAD(, lldpd_port) h_rports; /* Remote ports */
-
-#ifdef ENABLE_LLDPMED
-	int			h_tx_fast; /* current tx fast start count */
-#endif
 };
 MARSHAL_BEGIN(lldpd_hardware)
 MARSHAL_IGNORE(lldpd_hardware, h_entries.tqe_next)
@@ -560,15 +321,5 @@ void	 lldpd_remote_cleanup(struct lldpd_hardware *,
     int);
 void	 lldpd_port_cleanup(struct lldpd_port *, int);
 void	 lldpd_config_cleanup(struct lldpd_config *);
-#ifdef ENABLE_DOT1
-void	 lldpd_ppvid_cleanup(struct lldpd_port *);
-void	 lldpd_vlan_cleanup(struct lldpd_port *);
-void	 lldpd_pi_cleanup(struct lldpd_port *);
-#endif
-#ifdef ENABLE_CUSTOM
-void     lldpd_custom_tlv_cleanup(struct lldpd_port *, struct lldpd_custom *);
-void     lldpd_custom_tlv_add(struct lldpd_port *, struct lldpd_custom *);
-void     lldpd_custom_list_cleanup(struct lldpd_port *);
-#endif
 
 #endif

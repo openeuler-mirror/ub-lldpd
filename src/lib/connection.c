@@ -150,7 +150,7 @@ lldpctl_release(lldpctl_conn_t *conn)
 /**
  * Request some bytes if they are not already here.
  *
- * @param conn   The connection to lldpd.
+ * @param conn   The connection to ub-lldpd.
  * @param length The number of requested bytes.
  * @return A negative integer if we can't have the bytes or the number of bytes we got.
  */

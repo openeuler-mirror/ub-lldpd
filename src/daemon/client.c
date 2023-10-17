@@ -102,34 +102,14 @@ client_handle_set_configuration(struct lldpd *cfg, enum hmsg_type *type,
 		cfg->g_config.c_lldp_portid_type = config->c_lldp_portid_type;
 		levent_update_now(cfg);
 	}
-	if (CHANGED(c_lldp_agent_type) &&
-	    config->c_lldp_agent_type > LLDP_AGENT_TYPE_UNKNOWN &&
-	    config->c_lldp_agent_type <= LLDP_AGENT_TYPE_MAX) {
-		log_debug("rpc", "change lldp agent type to %d",
-		    config->c_lldp_agent_type);
-		cfg->g_config.c_lldp_agent_type = config->c_lldp_agent_type;
-		levent_update_now(cfg);
-	}
 	/* Pause/resume */
 	if (CHANGED(c_paused)) {
-		log_debug("rpc", "client asked to %s lldpd",
+		log_debug("rpc", "client asked to %s ub-lldpd",
 		    config->c_paused?"pause":"resume");
 		cfg->g_config.c_paused = config->c_paused;
 		levent_send_now(cfg);
 	}
 
-#ifdef ENABLE_LLDPMED
-	if (CHANGED(c_enable_fast_start)) {
-		cfg->g_config.c_enable_fast_start = config->c_enable_fast_start;
-		log_debug("rpc", "client asked to %s fast start",
-		    cfg->g_config.c_enable_fast_start?"enable":"disable");
-	}
-	if (CHANGED(c_tx_fast_interval) &&
-	    config->c_tx_fast_interval > 0) {
-		log_debug("rpc", "change fast interval to %d", config->c_tx_fast_interval);
-		cfg->g_config.c_tx_fast_interval = config->c_tx_fast_interval;
-	}
-#endif
 	if (CHANGED_STR(c_iface_pattern)) {
 		log_debug("rpc", "change interface pattern to %s",
 		    config->c_iface_pattern?config->c_iface_pattern:"(NULL)");
@@ -208,20 +188,6 @@ client_handle_set_configuration(struct lldpd *cfg, enum hmsg_type *type,
 		    config->c_mgmt_advertise?"enable":"disable");
 		cfg->g_config.c_mgmt_advertise = config->c_mgmt_advertise;
 		levent_update_now(cfg);
-	}
-	if (CHANGED(c_bond_slave_src_mac_type)) {
-		if (config->c_bond_slave_src_mac_type >
-		    LLDP_BOND_SLAVE_SRC_MAC_TYPE_UNKNOWN &&
-		    config->c_bond_slave_src_mac_type <=
-		    LLDP_BOND_SLAVE_SRC_MAC_TYPE_MAX) {
-			log_debug("rpc", "change bond src mac type to %d",
-			    config->c_bond_slave_src_mac_type);
-			cfg->g_config.c_bond_slave_src_mac_type =
-			    config->c_bond_slave_src_mac_type;
-		} else {
-			log_info("rpc", "Invalid bond slave src mac type: %d\n",
-			    config->c_bond_slave_src_mac_type);
-		}
 	}
 
 	lldpd_config_cleanup(config);
@@ -353,9 +319,6 @@ static int
 _client_handle_set_port(struct lldpd *cfg,
     struct lldpd_port *port, struct lldpd_port_set *set)
 {
-#ifdef ENABLE_LLDPMED
-	struct lldpd_med_loc *loc = NULL;
-#endif
 	if (set->local_id) {
 		log_debug("rpc", "requested change to Port ID");
 		free(port->p_id);
@@ -390,92 +353,6 @@ _client_handle_set_port(struct lldpd *cfg,
 		port->p_disable_rx = port->p_disable_tx = 1;
 		break;
 	}
-	if (set->vlan_tx_enabled > -1) {
-		port->p_vlan_tx_enabled = set->vlan_tx_enabled;
-		port->p_vlan_tx_tag = set->vlan_tx_tag;
-	}
-#ifdef ENABLE_LLDPMED
-	if (set->med_policy && set->med_policy->type > 0) {
-		log_debug("rpc", "requested change to MED policy");
-		if (set->med_policy->type > LLDP_MED_APPTYPE_LAST) {
-			log_warnx("rpc", "invalid policy provided: %d",
-			    set->med_policy->type);
-			return -1;
-		}
-		memcpy(&port->p_med_policy[set->med_policy->type - 1],
-		    set->med_policy, sizeof(struct lldpd_med_policy));
-		port->p_med_cap_enabled |= LLDP_MED_CAP_POLICY;
-	}
-	if (set->med_location && set->med_location->format > 0) {
-		char *newdata = NULL;
-		log_debug("rpc", "requested change to MED location");
-		if (set->med_location->format > LLDP_MED_LOCFORMAT_LAST) {
-			log_warnx("rpc", "invalid location format provided: %d",
-			    set->med_location->format);
-			return -1;
-		}
-		loc = \
-		    &port->p_med_location[set->med_location->format - 1];
-		free(loc->data);
-		memcpy(loc, set->med_location, sizeof(struct lldpd_med_loc));
-		if (!loc->data || !(newdata = malloc(loc->data_len))) loc->data_len = 0;
-		if (newdata) memcpy(newdata, loc->data, loc->data_len);
-		loc->data = newdata;
-		port->p_med_cap_enabled |= LLDP_MED_CAP_LOCATION;
-	}
-	if (set->med_power) {
-		log_debug("rpc", "requested change to MED power");
-		memcpy(&port->p_med_power, set->med_power,
-		    sizeof(struct lldpd_med_power));
-		switch (set->med_power->devicetype) {
-		case LLDP_MED_POW_TYPE_PD:
-			port->p_med_cap_enabled |= LLDP_MED_CAP_MDI_PD;
-			port->p_med_cap_enabled &= ~LLDP_MED_CAP_MDI_PSE;
-			break;
-		case LLDP_MED_POW_TYPE_PSE:
-			port->p_med_cap_enabled |= LLDP_MED_CAP_MDI_PSE;
-			port->p_med_cap_enabled &= ~LLDP_MED_CAP_MDI_PD;
-			break;
-		}
-	}
-#endif
-#ifdef ENABLE_DOT3
-	if (set->dot3_power) {
-		log_debug("rpc", "requested change to Dot3 power");
-		memcpy(&port->p_power, set->dot3_power,
-		    sizeof(struct lldpd_dot3_power));
-	}
-#endif
-#ifdef ENABLE_CUSTOM
-	if (set->custom_list_clear) {
-		log_debug("rpc", "requested custom TLVs clear");
-		lldpd_custom_list_cleanup(port);
-	} else {
-		if (set->custom) {
-			log_info("rpc", "custom TLV op %s oui %02x:%02x:%02x subtype %x",
-			    (set->custom_tlv_op == CUSTOM_TLV_REMOVE)?"remove":
-			    (set->custom_tlv_op == CUSTOM_TLV_ADD)?"add":
-			    "replace",
-			    set->custom->oui[0],
-			    set->custom->oui[1],
-			    set->custom->oui[2],
-			    set->custom->subtype);
-			switch (set->custom_tlv_op) {
-			case CUSTOM_TLV_REMOVE:
-				lldpd_custom_tlv_cleanup(port, set->custom);
-				break;
-			case CUSTOM_TLV_ADD:
-				lldpd_custom_tlv_add(port, set->custom);
-				break;
-			case CUSTOM_TLV_REPLACE:
-			default:
-				lldpd_custom_tlv_cleanup(port, set->custom);
-				lldpd_custom_tlv_add(port, set->custom);
-				break;
-			}
-		}
-	}
-#endif
 	return 0;
 }
 
@@ -529,21 +406,6 @@ set_port_finished:
 	free(set->ifname);
 	free(set->local_id);
 	free(set->local_descr);
-#ifdef ENABLE_LLDPMED
-	free(set->med_policy);
-	if (set->med_location) free(set->med_location->data);
-	free(set->med_location);
-	free(set->med_power);
-#endif
-#ifdef ENABLE_DOT3
-	free(set->dot3_power);
-#endif
-#ifdef ENABLE_CUSTOM
-	if (set->custom) {
-		free(set->custom->oui_info);
-		free(set->custom);
-	}
-#endif
 	free(set);
 	return 0;
 }

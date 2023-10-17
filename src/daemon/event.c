@@ -56,173 +56,6 @@ TAILQ_HEAD(ev_l, lldpd_events);
 #define levent_snmp_fds(cfg)   ((struct ev_l*)(cfg)->g_snmp_fds)
 #define levent_hardware_fds(hardware) ((struct ev_l*)(hardware)->h_recv)
 
-#ifdef USE_SNMP
-#include <net-snmp/net-snmp-config.h>
-#include <net-snmp/net-snmp-includes.h>
-#include <net-snmp/agent/net-snmp-agent-includes.h>
-#include <net-snmp/agent/snmp_vars.h>
-
-/* Compatibility with older versions of NetSNMP */
-#ifndef HAVE_SNMP_SELECT_INFO2
-# define netsnmp_large_fd_set fd_set
-# define snmp_read2 snmp_read
-# define snmp_select_info2 snmp_select_info
-# define netsnmp_large_fd_set_init(...)
-# define netsnmp_large_fd_set_cleanup(...)
-# define NETSNMP_LARGE_FD_SET FD_SET
-# define NETSNMP_LARGE_FD_CLR FD_CLR
-# define NETSNMP_LARGE_FD_ZERO FD_ZERO
-# define NETSNMP_LARGE_FD_ISSET FD_ISSET
-#else
-# include <net-snmp/library/large_fd_set.h>
-#endif
-
-static void levent_snmp_update(struct lldpd *);
-
-/*
- * Callback function when we have something to read from SNMP.
- *
- * This function is called because we have a read event on one SNMP
- * file descriptor. When need to call snmp_read() on it.
- */
-static void
-levent_snmp_read(evutil_socket_t fd, short what, void *arg)
-{
-	struct lldpd *cfg = arg;
-	netsnmp_large_fd_set fdset;
-	(void)what;
-	netsnmp_large_fd_set_init(&fdset, FD_SETSIZE);
-	NETSNMP_LARGE_FD_ZERO(&fdset);
-	NETSNMP_LARGE_FD_SET(fd, &fdset);
-	snmp_read2(&fdset);
-	levent_snmp_update(cfg);
-}
-
-/*
- * Callback function for a SNMP timeout.
- *
- * A SNMP timeout has occurred. Call `snmp_timeout()` to handle it.
- */
-static void
-levent_snmp_timeout(evutil_socket_t fd, short what, void *arg)
-{
-	struct lldpd *cfg = arg;
-	(void)what; (void)fd;
-	snmp_timeout();
-	run_alarms();
-	levent_snmp_update(cfg);
-}
-
-/*
- * Watch a new SNMP FD.
- *
- * @param base The libevent base we are working on.
- * @param fd The file descriptor we want to watch.
- *
- * The file descriptor is appended to the list of file descriptors we
- * want to watch.
- */
-static void
-levent_snmp_add_fd(struct lldpd *cfg, int fd)
-{
-	struct event_base *base = cfg->g_base;
-	struct lldpd_events *snmpfd = calloc(1, sizeof(struct lldpd_events));
-	if (!snmpfd) {
-		log_warn("event", "unable to allocate memory for new SNMP event");
-		return;
-	}
-	levent_make_socket_nonblocking(fd);
-	if ((snmpfd->ev = event_new(base, fd,
-				    EV_READ | EV_PERSIST,
-				    levent_snmp_read,
-				    cfg)) == NULL) {
-		log_warnx("event", "unable to allocate a new SNMP event for FD %d", fd);
-		free(snmpfd);
-		return;
-	}
-	if (event_add(snmpfd->ev, NULL) == -1) {
-		log_warnx("event", "unable to schedule new SNMP event for FD %d", fd);
-		event_free(snmpfd->ev);
-		free(snmpfd);
-		return;
-	}
-	TAILQ_INSERT_TAIL(levent_snmp_fds(cfg), snmpfd, next);
-}
-
-/*
- * Update SNMP event loop.
- *
- * New events are added and some other are removed. This function
- * should be called every time a SNMP event happens: either when
- * handling a SNMP packet, a SNMP timeout or when sending a SNMP
- * packet. This function will keep libevent in sync with NetSNMP.
- *
- * @param base The libevent base we are working on.
- */
-static void
-levent_snmp_update(struct lldpd *cfg)
-{
-	int maxfd = 0;
-	int block = 1;
-	struct timeval timeout;
-	static int howmany = 0;
-	int added = 0, removed = 0, current = 0;
-	struct lldpd_events *snmpfd, *snmpfd_next;
-
-	/* snmp_select_info() can be tricky to understand. We set `block` to
-	   1 to means that we don't request a timeout. snmp_select_info()
-	   will reset `block` to 0 if it wants us to setup a timeout. In
-	   this timeout, `snmp_timeout()` should be invoked.
-
-	   Each FD in `fdset` will need to be watched for reading. If one of
-	   them become active, `snmp_read()` should be called on it.
-	*/
-
-	netsnmp_large_fd_set fdset;
-	netsnmp_large_fd_set_init(&fdset, FD_SETSIZE);
-        NETSNMP_LARGE_FD_ZERO(&fdset);
-	snmp_select_info2(&maxfd, &fdset, &timeout, &block);
-
-	/* We need to untrack any event whose FD is not in `fdset`
-	   anymore */
-	for (snmpfd = TAILQ_FIRST(levent_snmp_fds(cfg));
-	     snmpfd;
-	     snmpfd = snmpfd_next) {
-		snmpfd_next = TAILQ_NEXT(snmpfd, next);
-		if (event_get_fd(snmpfd->ev) >= maxfd ||
-		    (!NETSNMP_LARGE_FD_ISSET(event_get_fd(snmpfd->ev), &fdset))) {
-			event_free(snmpfd->ev);
-			TAILQ_REMOVE(levent_snmp_fds(cfg), snmpfd, next);
-			free(snmpfd);
-			removed++;
-		} else {
-			NETSNMP_LARGE_FD_CLR(event_get_fd(snmpfd->ev), &fdset);
-			current++;
-		}
-	}
-
-	/* Invariant: FD in `fdset` are not in list of FD */
-	for (int fd = 0; fd < maxfd; fd++) {
-		if (NETSNMP_LARGE_FD_ISSET(fd, &fdset)) {
-			levent_snmp_add_fd(cfg, fd);
-			added++;
-		}
-	}
-	current += added;
-	if (howmany != current) {
-		log_debug("event", "added %d events, removed %d events, total of %d events",
-			   added, removed, current);
-		howmany = current;
-	}
-
-	/* If needed, handle timeout */
-	if (evtimer_add(cfg->g_snmp_timeout, block?NULL:&timeout) == -1)
-		log_warnx("event", "unable to schedule timeout function for SNMP");
-
-	netsnmp_large_fd_set_cleanup(&fdset);
-}
-#endif /* USE_SNMP */
-
 struct lldpd_one_client {
 	TAILQ_ENTRY(lldpd_one_client) next;
 	struct lldpd *cfg;
@@ -521,22 +354,6 @@ levent_init(struct lldpd *cfg)
 		  event_get_version(),
 		  event_base_get_method(cfg->g_base));
 
-	/* Setup SNMP */
-#ifdef USE_SNMP
-	if (cfg->g_snmp) {
-		agent_init(cfg, cfg->g_snmp_agentx);
-		cfg->g_snmp_timeout = evtimer_new(cfg->g_base,
-		    levent_snmp_timeout,
-		    cfg);
-		if (!cfg->g_snmp_timeout)
-			fatalx("event", "unable to setup timeout function for SNMP");
-		if ((cfg->g_snmp_fds =
-			malloc(sizeof(struct ev_l))) == NULL)
-			fatalx("event", "unable to allocate memory for SNMP events");
-		TAILQ_INIT(levent_snmp_fds(cfg));
-	}
-#endif
-
 	/* Setup loop that will run every X seconds. */
 	log_debug("event", "register loop timer");
 	if (!(cfg->g_main_loop = event_new(cfg->g_base, -1, 0,
@@ -582,9 +399,6 @@ levent_loop(struct lldpd *cfg)
 {
 	levent_init(cfg);
 	lldpd_loop(cfg);
-#ifdef USE_SNMP
-	if (cfg->g_snmp) levent_snmp_update(cfg);
-#endif
 
 	/* libevent loop */
 	do {
@@ -596,11 +410,6 @@ levent_loop(struct lldpd *cfg)
 
 	if (cfg->g_iface_timer_event != NULL)
 		event_free(cfg->g_iface_timer_event);
-
-#ifdef USE_SNMP
-	if (cfg->g_snmp)
-		agent_shutdown();
-#endif /* USE_SNMP */
 
 	levent_ctl_close_clients();
 }
@@ -843,14 +652,6 @@ levent_send_pdu(evutil_socket_t fd, short what, void *arg)
 	log_debug("event", "trigger sending PDU for port %s",
 	    hardware->h_ifname);
 	lldpd_send(hardware);
-
-#ifdef ENABLE_LLDPMED
-	if (hardware->h_tx_fast > 0)
-		hardware->h_tx_fast--;
-
-	if (hardware->h_tx_fast > 0)
-		tx_interval = hardware->h_cfg->g_config.c_tx_fast_interval * 1000;
-#endif
 
 	struct timeval tv;
 	tv.tv_sec = tx_interval / 1000;

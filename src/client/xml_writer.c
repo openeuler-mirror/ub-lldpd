@@ -43,12 +43,12 @@ void xml_new_writer(struct xml_writer_private *priv)
 {
 	priv->xw = xmlNewTextWriterDoc(&(priv->doc), 0);
 	if (!priv->xw)
-		fatalx("lldpctl", "cannot create xml writer");
+		fatalx("ub-lldpctl", "cannot create xml writer");
 
 	xmlTextWriterSetIndent(priv->xw, 4);
 
 	if (xmlTextWriterStartDocument(priv->xw, NULL, "UTF-8", NULL) < 0 )
-		fatalx("lldpctl", "cannot start xml document");
+		fatalx("ub-lldpctl", "cannot start xml document");
 }
 
 void xml_start(struct writer *w , const char *tag, const char *descr ) {
@@ -58,11 +58,11 @@ void xml_start(struct writer *w , const char *tag, const char *descr ) {
 		xml_new_writer(p);
 
 	if (xmlTextWriterStartElement(p->xw, BAD_CAST tag) < 0)
-		log_warnx("lldpctl", "cannot start '%s' element", tag);
+		log_warnx("ub-lldpctl", "cannot start '%s' element", tag);
 
 	if (descr && (strlen(descr) > 0)) {
 		if (xmlTextWriterWriteFormatAttribute(p->xw, BAD_CAST "label", "%s", descr) < 0)
-			log_warnx("lldpctl", "cannot add attribute 'label' to element %s", tag);
+			log_warnx("ub-lldpctl", "cannot add attribute 'label' to element %s", tag);
 	}
 
 	p->depth++;
@@ -72,26 +72,26 @@ void xml_attr(struct writer *w, const char *tag, const char *descr, const char *
 	struct xml_writer_private *p = w->priv;
 
 	if (xmlTextWriterWriteFormatAttribute(p->xw, BAD_CAST tag, "%s", value?value:"") < 0)
-		log_warnx("lldpctl", "cannot add attribute %s with value %s", tag, value?value:"(none)");
+		log_warnx("ub-lldpctl", "cannot add attribute %s with value %s", tag, value?value:"(none)");
 }
 
 void xml_data(struct writer *w, const char *data) {
 	struct xml_writer_private *p = w->priv;
 	if (xmlTextWriterWriteString(p->xw, BAD_CAST (data?data:"")) < 0 )
-		log_warnx("lldpctl", "cannot add '%s' as data to element", data?data:"(none)");
+		log_warnx("ub-lldpctl", "cannot add '%s' as data to element", data?data:"(none)");
 }
 
 void xml_end(struct writer *w) {
 	struct xml_writer_private *p = w->priv;
 
 	if (xmlTextWriterEndElement(p->xw) < 0 )
-		log_warnx("lldpctl", "cannot end element");
+		log_warnx("ub-lldpctl", "cannot end element");
 
 	if (--p->depth == 0) {
 		int failed = 0;
 
 		if (xmlTextWriterEndDocument(p->xw) < 0 ) {
-			log_warnx("lldpctl", "cannot finish document");
+			log_warnx("ub-lldpctl", "cannot finish document");
 			failed = 1;
 		}
 
@@ -107,7 +107,7 @@ void xml_end(struct writer *w) {
 void xml_finish(struct writer *w) {
 	struct xml_writer_private *p = w->priv;
 	if (p->depth != 0) {
-		log_warnx("lldpctl", "unbalanced tags");
+		log_warnx("ub-lldpctl", "unbalanced tags");
 		/* memory leak... */
 	}
 
@@ -122,7 +122,7 @@ struct writer *xml_init(FILE *fh) {
 
 	priv = malloc(sizeof(*priv));
 	if (!priv) {
-		fatalx("lldpctl", "out of memory");
+		fatalx("ub-lldpctl", "out of memory");
 		return NULL;
 	}
 	priv->fh = fh;
@@ -130,7 +130,7 @@ struct writer *xml_init(FILE *fh) {
 
 	result = malloc(sizeof(struct writer));
 	if (!result)
-		fatalx("lldpctl", "out of memory");
+		fatalx("ub-lldpctl", "out of memory");
 
 	result->priv  = priv;
 	result->start = xml_start;

@@ -1,5 +1,6 @@
 /* -*- mode: c; c-file-style: "openbsd" -*- */
 /*
+ * Copyright (c) 2023-2023 Hisilicon Limited.
  * Copyright (c) 2008 Vincent Bernat <bernat@luffy.cx>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -35,20 +36,10 @@
 #include <sys/types.h>
 #include <netinet/if_ether.h>
 #include <netinet/in.h>
+#include <net/if_arp.h>
 #include <sys/un.h>
 
 #include "lldp-tlv.h"
-#if defined ENABLE_CDP || defined ENABLE_FDP
-#  include "protocols/cdp.h"
-#endif
-#ifdef ENABLE_SONMP
-#  include "protocols/sonmp.h"
-#endif
-#ifdef ENABLE_EDP
-#  include "protocols/edp.h"
-#endif
-
-
 
 #include "../compat/compat.h"
 #include "../marshal.h"
@@ -80,6 +71,41 @@ struct event_base;
 
 #define ALIGNED_CAST(TYPE, ATTR) ((TYPE) (void *) (ATTR))
 
+#define LLDP_PROTO 0x109
+#define GUID_LEN 16
+#define UB_CFG_TYPE 5
+#define ARPHRD_UB 38
+#define DFX_PLACE_NUM 3
+#define DFX_BYTE_NUM 2
+#define TLV_INFO_BITS 9
+#define IEEE802_1Q_TAG_LEN 4
+
+enum link_header_addr {
+	HW_ADDR0 = 0,
+	HW_ADDR1,
+	HW_ADDR2,
+	HW_ADDR3,
+	HW_ADDR4,
+	HW_ADDR5,
+	HW_ADDR6,
+	HW_ADDR7,
+	HW_ADDR8,
+	HW_ADDR9,
+	HW_ADDR10,
+	HW_ADDR11,
+	HW_ADDR12,
+	HW_ADDR13,
+	HW_ADDR14,
+	HW_ADDR15
+};
+
+struct ub_link_header {
+	u_int8_t ub_cfg;
+	u_int16_t ub_protocol;
+	u_int8_t ub_dguid[GUID_LEN];
+	u_int8_t ub_sguid[GUID_LEN];
+} __attribute__((packed));
+
 struct protocol {
 	int		 mode;		/* > 0 mode identifier (unique per protocol) */
 	int		 enabled;	/* Is this protocol enabled? */
@@ -98,6 +124,7 @@ struct lldpd;
 /* lldpd.c */
 struct lldpd_hardware	*lldpd_get_hardware(struct lldpd *,
     char *, int);
+struct interfaces_device *lldpd_get_device(struct lldpd *, const char *);
 struct lldpd_hardware	*lldpd_alloc_hardware(struct lldpd *, char *, int);
 void	 lldpd_hardware_cleanup(struct lldpd*, struct lldpd_hardware *);
 struct lldpd_mgmt *lldpd_alloc_mgmt(int family, void *addr, size_t addrsize, u_int32_t iface);
@@ -108,6 +135,7 @@ int	 lldpd_main(int, char **, char **);
 void	 lldpd_update_localports(struct lldpd *);
 void	 lldpd_update_localchassis(struct lldpd *);
 void	 lldpd_cleanup(struct lldpd *);
+void lldpd_dump_packet(const char *token, const char *packet, int length, struct lldpd_hardware *hardware);
 
 /* frame.c */
 u_int16_t frame_checksum(const u_int8_t *, int, int);
@@ -135,54 +163,6 @@ int	 lldp_send_shutdown(PROTO_SEND_SIG);
 int	 lldp_send(PROTO_SEND_SIG);
 int	 lldp_decode(PROTO_DECODE_SIG);
 
-/* cdp.c */
-#ifdef ENABLE_CDP
-int	 cdpv1_send(PROTO_SEND_SIG);
-int	 cdpv2_send(PROTO_SEND_SIG);
-int	 cdpv1_guess(PROTO_GUESS_SIG);
-int	 cdpv2_guess(PROTO_GUESS_SIG);
-#endif
-#if defined ENABLE_CDP || defined ENABLE_FDP
-int	 cdp_decode(PROTO_DECODE_SIG);
-#endif
-#ifdef ENABLE_FDP
-int	 fdp_send(PROTO_SEND_SIG);
-#endif
-
-#ifdef ENABLE_SONMP
-/* sonmp.c */
-int	 sonmp_send(PROTO_SEND_SIG);
-int	 sonmp_decode(PROTO_DECODE_SIG);
-#endif
-
-#ifdef ENABLE_EDP
-/* edp.c */
-int	 edp_send(PROTO_SEND_SIG);
-int	 edp_decode(PROTO_DECODE_SIG);
-#endif
-
-/* dmi.c */
-#ifdef ENABLE_LLDPMED
-char	*dmi_hw(void);
-char	*dmi_fw(void);
-char	*dmi_sn(void);
-char	*dmi_manuf(void);
-char	*dmi_model(void);
-char	*dmi_asset(void);
-#endif
-
-#ifdef USE_SNMP
-/* agent.c */
-void		 agent_shutdown(void);
-void		 agent_init(struct lldpd *, const char *);
-void		 agent_notify(struct lldpd_hardware *, int, struct lldpd_port *);
-#endif
-
-#ifdef ENABLE_PRIVSEP
-/* agent_priv.c */
-void		 agent_priv_register_domain(void);
-#endif
-
 /* client.c */
 int
 client_handle_client(struct lldpd *cfg,
@@ -206,12 +186,10 @@ void	 asroot_open(void);
 #endif
 int    	 priv_iface_init(int, char *);
 int	 asroot_iface_init_os(int, char *, int *);
-int	 priv_iface_multicast(const char *, const u_int8_t *, int);
 int	 priv_iface_description(const char *, const char *);
 int	 asroot_iface_description_os(const char *, const char *);
 int	 priv_iface_promisc(const char*);
 int	 asroot_iface_promisc_os(const char *);
-int	 priv_snmp_socket(struct sockaddr_un *);
 
 enum priv_cmd {
 	PRIV_PING,
@@ -219,10 +197,8 @@ enum priv_cmd {
 	PRIV_GET_HOSTNAME,
 	PRIV_OPEN,
 	PRIV_IFACE_INIT,
-	PRIV_IFACE_MULTICAST,
 	PRIV_IFACE_DESCRIPTION,
 	PRIV_IFACE_PROMISC,
-	PRIV_SNMP_SOCKET,
 };
 
 /* priv-seccomp.c */
@@ -244,54 +220,14 @@ int	 priv_fd(enum priv_context);
 int	 receive_fd(enum priv_context);
 void	 send_fd(enum priv_context, int);
 
-/* interfaces-*.c */
+/*BPF filter that carries the UBL2 packet header*/
+/*Bit[0:7] of the packet is CFG, and the value is 0x5.*/
+/*Bits [8:23] in the packet are protocol, and the value is 0x109.*/
 
-/* BPF filter to get revelant information from interfaces */
-/* LLDP: "ether proto 0x88cc and ether dst 01:80:c2:00:00:0e" */
-/* FDP: "ether dst 01:e0:52:cc:cc:cc" */
-/* CDP: "ether dst 01:00:0c:cc:cc:cc" */
-/* SONMP: "ether dst 01:00:81:00:01:00" */
-/* EDP: "ether dst 00:e0:2b:00:00:00" */
-/* For optimization purpose, we first check if the first bit of the
-   first byte is 1. if not, this can only be an EDP packet:
-
-   tcpdump -dd "(ether[0] & 1 = 1 and
-                 ((ether proto 0x88cc and (ether dst 01:80:c2:00:00:0e or
-                                           ether dst 01:80:c2:00:00:03 or
-                                           ether dst 01:80:c2:00:00:00)) or
-                  (ether dst 01:e0:52:cc:cc:cc) or
-                  (ether dst 01:00:0c:cc:cc:cc) or
-                  (ether dst 01:00:81:00:01:00))) or
-                (ether dst 00:e0:2b:00:00:00)"
-*/
-
-#define ETH_P_LLDP 0x88cc
-#define LLDPD_FILTER_F				\
-	{ 0x30, 0, 0, 0x00000000 },		\
-	{ 0x54, 0, 0, 0x00000001 },		\
-	{ 0x15, 0, 16, 0x00000001 },		\
-	{ 0x28, 0, 0, 0x0000000c },		\
-	{ 0x15, 0, 6, ETH_P_LLDP },		\
-	{ 0x20, 0, 0, 0x00000002 },		\
-	{ 0x15, 2, 0, 0xc200000e },		\
-	{ 0x15, 1, 0, 0xc2000003 },		\
-	{ 0x15, 0, 2, 0xc2000000 },		\
-	{ 0x28, 0, 0, 0x00000000 },		\
-	{ 0x15, 12, 13, 0x00000180 },		\
-	{ 0x20, 0, 0, 0x00000002 },		\
-	{ 0x15, 0, 2, 0x52cccccc },		\
-	{ 0x28, 0, 0, 0x00000000 },		\
-	{ 0x15, 8, 9, 0x000001e0 },		\
-	{ 0x15, 1, 0, 0x0ccccccc },		\
-	{ 0x15, 0, 2, 0x81000100 },		\
-	{ 0x28, 0, 0, 0x00000000 },		\
-	{ 0x15, 4, 5, 0x00000100 },		\
-	{ 0x20, 0, 0, 0x00000002 },		\
-	{ 0x15, 0, 3, 0x2b000000 },		\
-	{ 0x28, 0, 0, 0x00000000 },		\
-	{ 0x15, 0, 1, 0x000000e0 },		\
-	{ 0x6, 0, 0, 0x00040000 },		\
-	{ 0x6, 0, 0, 0x00000000 }
+#define UB_LLDPD_FILTER_F                                                             \
+      { 0x30, 0, 0, 0x00000000 }, { 0x15, 0, 3, 0x00000005 },                         \
+      { 0x28, 0, 0, 0x00000001 }, { 0x15, 0, 1, 0x00000109 },                         \
+      { 0x6, 0, 0, 0xffffffff }, { 0x6, 0, 0, 0x00000000 }
 
 /* This function is responsible to refresh information about interfaces. It is
  * OS specific but should be present for each OS. It can use the functions in
@@ -308,8 +244,6 @@ void     interfaces_update(struct lldpd *);
 #define IFACE_WIRELESS_T    (1 << 4) /* Wireless interface */
 #define IFACE_BRIDGE_VLAN_T (1 << 5) /* Bridge-aware VLAN interface */
 
-#define MAX_VLAN 4096
-#define VLAN_BITMAP_LEN (MAX_VLAN / 32)
 struct interfaces_device {
 	TAILQ_ENTRY(interfaces_device) next;
 	int   ignore;		/* Ignore this interface */
@@ -321,8 +255,7 @@ struct interfaces_device {
 	int   flags;		/* Flags (IFF_*) */
 	int   mtu;		/* MTU */
 	int   type;		/* Type (see IFACE_*_T) */
-	uint32_t vlan_bmap[VLAN_BITMAP_LEN];	/* If a VLAN, what are the VLAN ID? */
-	int   pvid;		/* If a VLAN, what is the default VLAN? */
+	int dev_type;		/* Device type from driver */
 	struct interfaces_device *lower; /* Lower interface (for a VLAN for example) */
 	struct interfaces_device *upper; /* Upper interface (for a bridge or a bond) */
 
@@ -372,14 +305,8 @@ void interfaces_helper_port_name_desc(struct lldpd *,
 void interfaces_helper_mgmt(struct lldpd *,
     struct interfaces_address_list *,
     struct interfaces_device_list *);
-#ifdef ENABLE_DOT1
-void interfaces_helper_vlan(struct lldpd *,
-    struct interfaces_device_list *);
-#endif
 int interfaces_send_helper(struct lldpd *,
     struct lldpd_hardware *, char *, size_t);
-
-void interfaces_setup_multicast(struct lldpd *, const char *, int);
 int interfaces_routing_enabled(struct lldpd *);
 void interfaces_cleanup(struct lldpd *);
 
@@ -388,27 +315,21 @@ void interfaces_cleanup(struct lldpd *);
 struct interfaces_device_list  *netlink_get_interfaces(struct lldpd *);
 struct interfaces_address_list *netlink_get_addresses(struct lldpd *);
 void netlink_cleanup(struct lldpd *);
-struct lldpd_netlink;
-#endif
-
-#ifndef HOST_OS_LINUX
-/* interfaces-bpf.c */
-int ifbpf_phys_init(struct lldpd *, struct lldpd_hardware *);
+struct lldpd_netlink {
+	int nl_socket;
+	int nl_socket_recv_size;
+	/* Cache */
+	struct interfaces_device_list *devices;
+	struct interfaces_address_list *addresses;
+};
 #endif
 
 /* pattern.c */
 int pattern_match(char *, char *, int);
 
-/* bitmap.c */
-void bitmap_set(uint32_t *bmap, uint16_t vlan_id);
-int bitmap_isempty(uint32_t *bmap);
-unsigned int bitmap_numbits(uint32_t *bmap);
-
 struct lldpd {
 	int			 g_sock;
 	struct event_base	*g_base;
-#ifdef USE_SNMP
-#endif
 
 	struct lldpd_config	 g_config;
 
@@ -416,12 +337,6 @@ struct lldpd {
 	int			 g_lastrid;
 	struct event		*g_main_loop;
 	struct event		*g_cleanup_timer;
-#ifdef USE_SNMP
-	int			 g_snmp;
-	struct event		*g_snmp_timeout;
-	void			*g_snmp_fds;
-	const char		*g_snmp_agentx;
-#endif /* USE_SNMP */
 
 	/* Unix socket handling */
 	const char		*g_ctlname;

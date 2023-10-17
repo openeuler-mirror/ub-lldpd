@@ -4,14 +4,14 @@ AM_LDFLAGS = $(LLDP_LDFLAGS)
 BUILT_SOURCES =
 CLEANFILES =
 
-sbin_PROGRAMS = lldpd
-man_MANS = lldpd.8
+sbin_PROGRAMS = ub-lldpd
+man_MANS = ub-lldpd.8
 
-noinst_LTLIBRARIES = liblldpd.la
+noinst_LTLIBRARIES = libublldpd.la
 
-## Convenience library for lldpd and tests
-nodist_liblldpd_la_SOURCES =
-liblldpd_la_SOURCES  = \
+## Convenience library for ub-lldpd and tests
+nodist_libublldpd_la_SOURCES =
+libublldpd_la_SOURCES  = \
 	frame.h frame.c \
 	lldp-tlv.h \
 	client.c \
@@ -20,86 +20,24 @@ liblldpd_la_SOURCES  = \
 	interfaces.c \
 	event.c lldpd.c \
 	pattern.c \
-	bitmap.c \
 	probes.d trace.h \
-	protocols/lldp.c \
-	protocols/cdp.c \
-	protocols/cdp.h \
-	protocols/sonmp.c \
-	protocols/sonmp.h \
-	protocols/edp.c \
-	protocols/edp.h
-liblldpd_la_CFLAGS   = $(AM_CFLAGS) @libevent_CFLAGS@ @libcap_CFLAGS@
-liblldpd_la_CPPFLAGS = $(AM_CPPFLAGS) -DSYSCONFDIR='"$(sysconfdir)"' -DLLDPCLI_PATH='"$(sbindir)/lldpcli"'
-liblldpd_la_LIBADD   = \
+	protocols/lldp.c
+libublldpd_la_CFLAGS   = $(AM_CFLAGS) @libevent_CFLAGS@ @libcap_CFLAGS@
+libublldpd_la_CPPFLAGS = $(AM_CPPFLAGS) -DSYSCONFDIR='"$(sysconfdir)"' -DLLDPCLI_PATH='"$(sbindir)/ub-lldpcli"'
+libublldpd_la_LIBADD   = \
 	$(top_builddir)/src/libcommon-daemon-client.la \
 	$(top_builddir)/src/libcommon-daemon-lib.la @libevent_LIBS@ @libcap_LIBS@
 
-## lldpd
-lldpd_SOURCES = main.c
-lldpd_LDFLAGS = $(AM_LDFLAGS) $(LLDP_BIN_LDFLAGS)
-lldpd_LDADD   = liblldpd.la @libevent_LDFLAGS@
+## ub-lldpd
+ub_lldpd_SOURCES = main.c
+ub_lldpd_LDFLAGS = $(AM_LDFLAGS) $(LLDP_BIN_LDFLAGS)
+ub_lldpd_LDADD   = libublldpd.la @libevent_LDFLAGS@
 
-if HOST_OS_LINUX
-liblldpd_la_SOURCES += \
+libublldpd_la_SOURCES += \
 	forward-linux.c \
 	interfaces-linux.c \
 	netlink.c \
-	dmi-linux.c \
 	priv-linux.c
-endif
-if HOST_OS_DRAGONFLY
-liblldpd_la_SOURCES += \
-	forward-bsd.c \
-	interfaces-bpf.c \
-	interfaces-bsd.c \
-	dmi-dummy.c \
-	priv-bsd.c
-endif
-if HOST_OS_FREEBSD
-liblldpd_la_SOURCES += \
-	forward-bsd.c \
-	interfaces-bpf.c \
-	interfaces-bsd.c \
-	dmi-freebsd.c \
-	priv-bsd.c
-endif
-if HOST_OS_OPENBSD
-liblldpd_la_SOURCES += \
-	interfaces-bpf.c \
-	forward-bsd.c \
-	interfaces-bsd.c \
-	dmi-openbsd.c \
-	priv-bsd.c
-endif
-if HOST_OS_NETBSD
-liblldpd_la_SOURCES += \
-	forward-bsd.c \
-	interfaces-bpf.c \
-	interfaces-bsd.c \
-	dmi-dummy.c \
-	priv-bsd.c
-endif
-if HOST_OS_OSX
-liblldpd_la_SOURCES += \
-	forward-bsd.c \
-	interfaces-bpf.c \
-	interfaces-bsd.c \
-	dmi-osx.c \
-	priv-bsd.c
-liblldpd_la_LDFLAGS  = $(AM_LDFLAGS)
-liblldpd_la_LDFLAGS += -framework Foundation
-liblldpd_la_LDFLAGS += -framework CoreFoundation -framework IOKit
-liblldpd_la_LDFLAGS += -framework IOKit
-endif
-if HOST_OS_SOLARIS
-liblldpd_la_SOURCES += \
-	forward-solaris.c \
-	interfaces-bpf.c \
-	interfaces-solaris.c \
-	dmi-dummy.c \
-	priv-bsd.c
-endif
 
 # seccomp support
 if USE_SECCOMP
@@ -113,39 +51,29 @@ syscall-names.h:
 		LC_ALL=C sed -r -n -e 's/^\#define[ \t]+__NR_([a-z0-9_]+)[ \t]+([0-9]+)(.*)/ [\2] = "\1",/p' >> $@ ;\
 	echo "};" >> $@ ;\
 	rm $@.tmp
-nodist_liblldpd_la_SOURCES += syscall-names.h
-liblldpd_la_SOURCES += priv-seccomp.c
-liblldpd_la_CFLAGS  += @libseccomp_CFLAGS@
-liblldpd_la_LIBADD  += @libseccomp_LIBS@
-endif
-
-# Add SNMP support if needed
-if USE_SNMP
-noinst_LTLIBRARIES       += liblldpd-snmp.la
-liblldpd_snmp_la_SOURCES  = agent.c agent_priv.c agent.h
-liblldpd_snmp_la_CFLAGS   = $(liblldpd_la_CFLAGS) @NETSNMP_CFLAGS@
-liblldpd_snmp_la_CPPFLAGS = $(liblldpd_la_CPPFLAGS)
-liblldpd_la_LIBADD       += liblldpd-snmp.la
-lldpd_LDADD              += @NETSNMP_LIBS@
+nodist_libublldpd_la_SOURCES += syscall-names.h
+libublldpd_la_SOURCES += priv-seccomp.c
+libublldpd_la_CFLAGS  += @libseccomp_CFLAGS@
+libublldpd_la_LIBADD  += @libseccomp_LIBS@
 endif
 
 ## Systemtap/DTrace
 EXTRA_DIST = dtrace2systemtap.awk
 if ENABLE_SYSTEMTAP
 BUILT_SOURCES += probes.h
-CLEANFILES    += probes.h lldpd.stp
+CLEANFILES    += probes.h ub-lldpd.stp
 probes.h: probes.d
 	$(AM_V_GEN)
 	$(AM_V_at)$(DTRACE) -C -h -s $< -o $@
 probes.o: probes.d
 	$(AM_V_GEN)
 	$(AM_V_at)$(DTRACE) -C -G -s $< -o $@
-lldpd_LDADD += probes.o
+ub_lldpd_LDADD += probes.o
 
-lldpd.stp: probes.d $(srcdir)/dtrace2systemtap.awk $(top_builddir)/config.status
+ub-lldpd.stp: probes.d $(srcdir)/dtrace2systemtap.awk $(top_builddir)/config.status
 	$(AM_V_GEN)$(AWK) -f $(srcdir)/dtrace2systemtap.awk -v sbindir=$(sbindir) $< > $@ || ( rm -f $@ ; exit 1 )
 tapsetdir = $(datadir)/systemtap/tapset
-tapset_DATA = lldpd.stp
+tapset_DATA = ub-lldpd.stp
 endif
 
 ## libevent
@@ -157,24 +85,22 @@ endif
 
 ## systemd service file
 if HAVE_SYSTEMDSYSTEMUNITDIR
-systemdsystemunit_DATA = lldpd.service
+systemdsystemunit_DATA = ub-lldpd.service
 endif
 
 if HAVE_SYSUSERSDIR
-sysusers_DATA = lldpd.sysusers.conf
+sysusers_DATA = ub-lldpd.sysusers.conf
 endif
 
-if HOST_OS_LINUX
 if HAVE_APPARMORDIR
-apparmor_DATA = usr.sbin.lldpd
-endif
+apparmor_DATA = usr.sbin.ub-lldpd
 endif
 
-TEMPLATES   = lldpd.8    lldpd.service    lldpd.sysusers.conf    usr.sbin.lldpd
-EXTRA_DIST += lldpd.8.in lldpd.service.in lldpd.sysusers.conf.in usr.sbin.lldpd.in
+TEMPLATES   = ub-lldpd.8    ub-lldpd.service    ub-lldpd.sysusers.conf    usr.sbin.ub-lldpd
+EXTRA_DIST += ub-lldpd.8.in ub-lldpd.service.in ub-lldpd.sysusers.conf.in usr.sbin.ub-lldpd.in
 CLEANFILES += $(TEMPLATES)
-lldpd.8: lldpd.8.in
-lldpd.service: lldpd.service.in
-lldpd.sysusers.conf: lldpd.sysusers.conf.in
-usr.sbin.lldpd: usr.sbin.lldpd.in
+ub-lldpd.8: ub-lldpd.8.in
+ub-lldpd.service: ub-lldpd.service.in
+ub-lldpd.sysusers.conf: ub-lldpd.sysusers.conf.in
+usr.sbin.ub-lldpd: usr.sbin.ub-lldpd.in
 include $(top_srcdir)/edit.am

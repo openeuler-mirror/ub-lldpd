@@ -25,17 +25,6 @@
 #include "../atom.h"
 #include "../helpers.h"
 
-static struct atom_map bond_slave_src_mac_map = {
-	.key = lldpctl_k_config_bond_slave_src_mac_type,
-	.map = {
-		{ LLDP_BOND_SLAVE_SRC_MAC_TYPE_REAL,   "real"},
-		{ LLDP_BOND_SLAVE_SRC_MAC_TYPE_ZERO,   "zero"},
-		{ LLDP_BOND_SLAVE_SRC_MAC_TYPE_FIXED,  "fixed"},
-		{ LLDP_BOND_SLAVE_SRC_MAC_TYPE_LOCALLY_ADMINISTERED, "local" },
-		{ LLDP_BOND_SLAVE_SRC_MAC_TYPE_UNKNOWN, NULL},
-	},
-};
-
 static struct atom_map lldp_portid_map = {
 	.key = lldpctl_k_config_lldp_portid_type,
 	.map = {
@@ -45,20 +34,7 @@ static struct atom_map lldp_portid_map = {
 		{ LLDP_PORTID_SUBTYPE_UNKNOWN,  NULL},
 	},
 };
-
-static struct atom_map lldp_agent_map = {
-	.key = lldpctl_k_config_lldp_agent_type,
-	.map = {
-		{ LLDP_AGENT_TYPE_NEAREST_BRIDGE,          "nearest bridge"},
-		{ LLDP_AGENT_TYPE_NEAREST_NONTPMR_BRIDGE,  "nearest non-TPMR bridge"},
-		{ LLDP_AGENT_TYPE_NEAREST_CUSTOMER_BRIDGE, "nearest customer bridge"},
-		{ LLDP_AGENT_TYPE_UNKNOWN, NULL},
-	},
-};
-
-ATOM_MAP_REGISTER(bond_slave_src_mac_map, 1);
 ATOM_MAP_REGISTER(lldp_portid_map,        2);
-ATOM_MAP_REGISTER(lldp_agent_map,         3);
 
 static int
 _lldpctl_atom_new_config(lldpctl_atom_t *atom, va_list ap)
@@ -101,15 +77,9 @@ _lldpctl_atom_get_str_config(lldpctl_atom_t *atom, lldpctl_key_t key)
 		res = c->config->c_platform; break;
 	case lldpctl_k_config_hostname:
 		res = c->config->c_hostname; break;
-	case lldpctl_k_config_bond_slave_src_mac_type:
-		return map_lookup(bond_slave_src_mac_map.map,
-				c->config->c_bond_slave_src_mac_type);
 	case lldpctl_k_config_lldp_portid_type:
 		return map_lookup(lldp_portid_map.map,
 		    c->config->c_lldp_portid_type);
-	case lldpctl_k_config_lldp_agent_type:
-		return map_lookup(lldp_agent_map.map,
-		    c->config->c_lldp_agent_type);
 	default:
 		SET_ERROR(atom->conn, LLDPCTL_ERR_NOT_EXIST);
 		return NULL;
@@ -236,14 +206,6 @@ _lldpctl_atom_get_int_config(lldpctl_atom_t *atom, lldpctl_key_t key)
 		return c->config->c_cap_advertise;
 	case lldpctl_k_config_chassis_mgmt_advertise:
 		return c->config->c_mgmt_advertise;
-#ifdef ENABLE_LLDPMED
-	case lldpctl_k_config_lldpmed_noinventory:
-		return c->config->c_noinventory;
-	case lldpctl_k_config_fast_start_enabled:
-		return c->config->c_enable_fast_start;
-	case lldpctl_k_config_fast_start_interval:
-		return c->config->c_tx_fast_interval;
-#endif
 	case lldpctl_k_config_tx_hold:
 		return c->config->c_tx_hold;
 	case lldpctl_k_config_max_neighbors:
@@ -288,14 +250,6 @@ _lldpctl_atom_set_int_config(lldpctl_atom_t *atom, lldpctl_key_t key,
 	case lldpctl_k_config_chassis_mgmt_advertise:
 		config.c_mgmt_advertise = c->config->c_mgmt_advertise = value;
 		break;
-#ifdef ENABLE_LLDPMED
-	case lldpctl_k_config_fast_start_enabled:
-		config.c_enable_fast_start = c->config->c_enable_fast_start = value;
-		break;
-	case lldpctl_k_config_fast_start_interval:
-		config.c_tx_fast_interval = c->config->c_tx_fast_interval = value;
-		break;
-#endif
 	case lldpctl_k_config_tx_hold:
 		config.c_tx_hold = value;
 		if (value > 0) c->config->c_tx_hold = value;
@@ -304,17 +258,9 @@ _lldpctl_atom_set_int_config(lldpctl_atom_t *atom, lldpctl_key_t key,
 		config.c_max_neighbors = value;
 		if (value > 0) c->config->c_max_neighbors = value;
 		break;
-	case lldpctl_k_config_bond_slave_src_mac_type:
-		config.c_bond_slave_src_mac_type = value;
-		c->config->c_bond_slave_src_mac_type = value;
-		break;
 	case lldpctl_k_config_lldp_portid_type:
 		config.c_lldp_portid_type = value;
 		c->config->c_lldp_portid_type = value;
-		break;
-	case lldpctl_k_config_lldp_agent_type:
-		config.c_lldp_agent_type = value;
-		c->config->c_lldp_agent_type = value;
 		break;
 	default:
 		SET_ERROR(atom->conn, LLDPCTL_ERR_NOT_EXIST);

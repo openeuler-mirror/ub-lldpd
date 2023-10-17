@@ -138,20 +138,6 @@ priv_iface_init(int index, char *iface)
 }
 
 int
-priv_iface_multicast(const char *name, const u_int8_t *mac, int add)
-{
-	int rc;
-	enum priv_cmd cmd = PRIV_IFACE_MULTICAST;
-	must_write(PRIV_UNPRIVILEGED, &cmd, sizeof(enum priv_cmd));
-	must_write(PRIV_UNPRIVILEGED, name, IFNAMSIZ);
-	must_write(PRIV_UNPRIVILEGED, mac, ETHER_ADDR_LEN);
-	must_write(PRIV_UNPRIVILEGED, &add, sizeof(int));
-	priv_wait();
-	must_read(PRIV_UNPRIVILEGED, &rc, sizeof(int));
-	return rc;
-}
-
-int
 priv_iface_description(const char *name, const char *description)
 {
 	int rc, len = strlen(description);
@@ -176,20 +162,6 @@ priv_iface_promisc(const char *ifname)
 	priv_wait();
 	must_read(PRIV_UNPRIVILEGED, &rc, sizeof(int));
 	return rc;
-}
-
-int
-priv_snmp_socket(struct sockaddr_un *addr)
-{
-	int rc;
-	enum priv_cmd cmd = PRIV_SNMP_SOCKET;
-	must_write(PRIV_UNPRIVILEGED, &cmd, sizeof(enum priv_cmd));
-	must_write(PRIV_UNPRIVILEGED, addr, sizeof(struct sockaddr_un));
-	priv_wait();
-	must_read(PRIV_UNPRIVILEGED, &rc, sizeof(int));
-	if (rc < 0)
-		return rc;
-	return receive_fd(PRIV_UNPRIVILEGED);
 }
 
 static void
@@ -267,45 +239,6 @@ asroot_iface_init()
 }
 
 static void
-asroot_iface_multicast()
-{
-	int sock = -1, add, rc = 0;
-	struct ifreq ifr = { .ifr_name = {} };
-	must_read(PRIV_PRIVILEGED, ifr.ifr_name, IFNAMSIZ);
-#if defined HOST_OS_LINUX
-	must_read(PRIV_PRIVILEGED, ifr.ifr_hwaddr.sa_data, ETHER_ADDR_LEN);
-#elif defined HOST_OS_FREEBSD || defined HOST_OS_OSX || defined HOST_OS_DRAGONFLY
-	/* Black magic from mtest.c */
-	struct sockaddr_dl *dlp = ALIGNED_CAST(struct sockaddr_dl *, &ifr.ifr_addr);
-	dlp->sdl_len = sizeof(struct sockaddr_dl);
-	dlp->sdl_family = AF_LINK;
-	dlp->sdl_index = 0;
-	dlp->sdl_nlen = 0;
-	dlp->sdl_alen = ETHER_ADDR_LEN;
-	dlp->sdl_slen = 0;
-	must_read(PRIV_PRIVILEGED, LLADDR(dlp), ETHER_ADDR_LEN);
-#elif defined HOST_OS_OPENBSD || defined HOST_OS_NETBSD || defined HOST_OS_SOLARIS
-	struct sockaddr *sap = (struct sockaddr *)&ifr.ifr_addr;
-#if ! defined HOST_OS_SOLARIS
-	sap->sa_len = sizeof(struct sockaddr);
-#endif
-	sap->sa_family = AF_UNSPEC;
-	must_read(PRIV_PRIVILEGED, sap->sa_data, ETHER_ADDR_LEN);
-#else
-#error Unsupported OS
-#endif
-
-	must_read(PRIV_PRIVILEGED, &add, sizeof(int));
-	if (((sock = socket(AF_INET, SOCK_DGRAM, 0)) == -1) ||
-	    ((ioctl(sock, (add)?SIOCADDMULTI:SIOCDELMULTI,
-		    &ifr) < 0) && (errno != EADDRINUSE)))
-		rc = errno;
-
-	if (sock != -1) close(sock);
-	must_write(PRIV_PRIVILEGED, &rc, sizeof(rc));
-}
-
-static void
 asroot_iface_description()
 {
 	char name[IFNAMSIZ];
@@ -338,57 +271,6 @@ asroot_iface_promisc()
 	must_write(PRIV_PRIVILEGED, &rc, sizeof(rc));
 }
 
-static void
-asroot_snmp_socket()
-{
-	int sock, rc;
-	static struct sockaddr_un *addr = NULL;
-	struct sockaddr_un bogus;
-
-	if (!addr) {
-		addr = (struct sockaddr_un *)malloc(sizeof(struct sockaddr_un));
-		if (!addr) fatal("privsep", NULL);
-		must_read(PRIV_PRIVILEGED, addr, sizeof(struct sockaddr_un));
-	} else
-		/* We have already been asked to connect to a socket. We will
-		 * connect to the same socket. */
-		must_read(PRIV_PRIVILEGED, &bogus, sizeof(struct sockaddr_un));
-	if (addr->sun_family != AF_UNIX)
-		fatal("privsep", "someone is trying to trick me");
-	addr->sun_path[sizeof(addr->sun_path)-1] = '\0';
-
-	if ((sock = socket(PF_UNIX, SOCK_STREAM, 0)) < 0) {
-		log_warn("privsep", "cannot open socket");
-		must_write(PRIV_PRIVILEGED, &sock, sizeof(int));
-		return;
-	}
-        if ((rc = connect(sock, (struct sockaddr *) addr,
-		    sizeof(struct sockaddr_un))) != 0) {
-		log_info("privsep", "cannot connect to %s: %s",
-                          addr->sun_path, strerror(errno));
-		close(sock);
-		rc = -1;
-		must_write(PRIV_PRIVILEGED, &rc, sizeof(int));
-		return;
-        }
-
-	int flags;
-	if ((flags = fcntl(sock, F_GETFL, NULL)) < 0 ||
-	    fcntl(sock, F_SETFL, flags | O_NONBLOCK) < 0) {
-		log_warn("privsep", "cannot set sock %s to non-block : %s",
-                          addr->sun_path, strerror(errno));
-
-		close(sock);
-		rc = -1;
-		must_write(PRIV_PRIVILEGED, &rc, sizeof(int));
-		return;
-	}
-
-	must_write(PRIV_PRIVILEGED, &rc, sizeof(int));
-	send_fd(PRIV_PRIVILEGED, sock);
-	close(sock);
-}
-
 struct dispatch_actions {
 	enum priv_cmd msg;
 	void(*function)(void);
@@ -402,10 +284,8 @@ static struct dispatch_actions actions[] = {
 	{PRIV_OPEN, asroot_open},
 #endif
 	{PRIV_IFACE_INIT, asroot_iface_init},
-	{PRIV_IFACE_MULTICAST, asroot_iface_multicast},
 	{PRIV_IFACE_DESCRIPTION, asroot_iface_description},
 	{PRIV_IFACE_PROMISC, asroot_iface_promisc},
-	{PRIV_SNMP_SOCKET, asroot_snmp_socket},
 	{-1, NULL}
 };
 

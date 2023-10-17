@@ -1,6 +1,6 @@
-#compdef lldpcli
+#compdef ub-lldpcli
 #
-# zsh completion for lldpcli
+# zsh completion for ub-lldpcli
 #
 # Copyright (c) 2014 Vincent Bernat <bernat@luffy.cx>
 #
@@ -17,27 +17,27 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
-__lldpcli_command () {
+__ub_lldpcli_command () {
     local -a completions
-    completions=(${(f)"$(_call_program commands lldpcli complete ${words[1,$(($CURRENT-1))]})"})
+    completions=(${(f)"$(_call_program commands ub-lldpcli complete ${words[1,$(($CURRENT-1))]})"})
     completions=(${completions:s/ /:/})
-    _describe -t lldpcli-command "lldpcli completion" completions "$@"
+    _describe -t ub-lldpcli-command "ub-lldpcli completion" completions "$@"
 }
 
-_lldpcli () {
+_ub_lldpcli () {
     local curcontext="$curcontext" state line
 
     _arguments -C \
         '*-d[print more debugging information]' \
         '(- *)-v[print version number and exit]' \
-        '-u[use an alternate socket with lldpd]:UNIX socket:_files' \
+        '-u[use an alternate socket with ub-lldpd]:UNIX socket:_files' \
         '-f[output format]:format:(plain xml json json0 keyvalue)' \
         '*-c[read a configuration file]:configuration file:_files' \
-        '(-)*::lldpcli command:__lldpcli_command'
+        '(-)*::ub-lldpcli command:__ub_lldpcli_command'
 }
 
 
-_lldpcli "$@"
+_ub_lldpcli "$@"
 
 # Local Variables:
 # mode: Shell-Script

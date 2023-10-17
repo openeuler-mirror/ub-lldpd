@@ -1,5 +1,6 @@
 /* -*- mode: c; c-file-style: "openbsd" -*- */
 /*
+ * Copyright (c) 2023-2023 Hisilicon Limited.
  * Copyright (c) 2008 Vincent Bernat <bernat@luffy.cx>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -17,6 +18,7 @@
 
 #include "lldpd.h"
 #include "trace.h"
+#include "frame.h"
 
 #include <stdio.h>
 #include <unistd.h>
@@ -55,24 +57,6 @@ static struct protocol protos[] =
 	  { LLDP_ADDR_NEAREST_BRIDGE,
 	    LLDP_ADDR_NEAREST_NONTPMR_BRIDGE,
 	    LLDP_ADDR_NEAREST_CUSTOMER_BRIDGE } },
-#ifdef ENABLE_CDP
-	{ LLDPD_MODE_CDPV1, 0, "CDPv1", 'c', cdpv1_send, cdp_decode, cdpv1_guess,
-	  { CDP_MULTICAST_ADDR } },
-	{ LLDPD_MODE_CDPV2, 0, "CDPv2", 'c', cdpv2_send, cdp_decode, cdpv2_guess,
-	  { CDP_MULTICAST_ADDR } },
-#endif
-#ifdef ENABLE_SONMP
-	{ LLDPD_MODE_SONMP, 0, "SONMP", 's', sonmp_send, sonmp_decode, NULL,
-	  { SONMP_MULTICAST_ADDR } },
-#endif
-#ifdef ENABLE_EDP
-	{ LLDPD_MODE_EDP, 0, "EDP", 'e', edp_send, edp_decode, NULL,
-	  { EDP_MULTICAST_ADDR } },
-#endif
-#ifdef ENABLE_FDP
-	{ LLDPD_MODE_FDP, 0, "FDP", 'f', fdp_send, cdp_decode, NULL,
-	  { FDP_MULTICAST_ADDR } },
-#endif
 	{ 0, 0, "any", ' ', NULL, NULL, NULL,
 	  { { 0, 0, 0, 0, 0, 0 } } }
 };
@@ -81,7 +65,7 @@ static char		**saved_argv;
 #ifdef HAVE___PROGNAME
 extern const char	*__progname;
 #else
-# define __progname "lldpd"
+# define __progname "ub-lldpd"
 #endif
 
 static void
@@ -94,49 +78,19 @@ usage(void)
 
 	fprintf(stderr, "-d       Do not daemonize.\n");
 	fprintf(stderr, "-r       Receive-only mode\n");
-	fprintf(stderr, "-i       Disable LLDP-MED inventory TLV transmission.\n");
 	fprintf(stderr, "-k       Disable advertising of kernel release, version, machine.\n");
 	fprintf(stderr, "-S descr Override the default system description.\n");
 	fprintf(stderr, "-P name  Override the default hardware platform.\n");
 	fprintf(stderr, "-m IP    Specify the IP management addresses of this system.\n");
-	fprintf(stderr, "-u file  Specify the Unix-domain socket used for communication with lldpctl(8).\n");
+	fprintf(stderr, "-u file  Specify the Unix-domain socket used for communication with ub-lldpctl(8).\n");
 	fprintf(stderr, "-H mode  Specify the behaviour when detecting multiple neighbors.\n");
 	fprintf(stderr, "-I iface Limit interfaces to use.\n");
 	fprintf(stderr, "-C iface Limit interfaces to use for computing chassis ID.\n");
-	fprintf(stderr, "-L path  Override path for lldpcli command.\n");
-	fprintf(stderr, "-O file  Override default configuration locations processed by lldpcli(8) at start.\n");
-#ifdef ENABLE_LLDPMED
-	fprintf(stderr, "-M class Enable emission of LLDP-MED frame. 'class' should be one of:\n");
-	fprintf(stderr, "             1 Generic Endpoint (Class I)\n");
-	fprintf(stderr, "             2 Media Endpoint (Class II)\n");
-	fprintf(stderr, "             3 Communication Device Endpoints (Class III)\n");
-	fprintf(stderr, "             4 Network Connectivity Device\n");
-#endif
-#ifdef USE_SNMP
-	fprintf(stderr, "-x       Enable SNMP subagent.\n");
-	fprintf(stderr, "-X sock  Specify the SNMP subagent socket.\n");
-#endif
+	fprintf(stderr, "-L path  Override path for ub-lldpcli command.\n");
+	fprintf(stderr, "-O file  Override default configuration locations processed by ub-lldpcli(8) at start.\n");
+	fprintf(stderr, "-F       Enable dfx output.\n");
 	fprintf(stderr, "\n");
-
-#if defined ENABLE_CDP || defined ENABLE_EDP || defined ENABLE_FDP || defined ENABLE_SONMP
-	fprintf(stderr, "Additional protocol support.\n");
-#ifdef ENABLE_CDP
-	fprintf(stderr, "-c       Enable the support of CDP protocol. (Cisco)\n");
-#endif
-#ifdef ENABLE_EDP
-	fprintf(stderr, "-e       Enable the support of EDP protocol. (Extreme)\n");
-#endif
-#ifdef ENABLE_FDP
-	fprintf(stderr, "-f       Enable the support of FDP protocol. (Foundry)\n");
-#endif
-#ifdef ENABLE_SONMP
-	fprintf(stderr, "-s       Enable the support of SONMP protocol. (Nortel)\n");
-#endif
-
-	fprintf(stderr, "\n");
-#endif
-
-	fprintf(stderr, "see manual page lldpd(8) for more information\n");
+	fprintf(stderr, "see manual page ub-lldpd(8) for more information\n");
 	exit(1);
 }
 
@@ -157,6 +111,18 @@ lldpd_get_hardware(struct lldpd *cfg, char *name, int index)
 	return hardware;
 }
 
+struct interfaces_device *
+lldpd_get_device(struct lldpd *cfg, const char *name)
+{
+	struct interfaces_device *iff;
+
+	TAILQ_FOREACH (iff, cfg->g_netlink->devices, next) {
+		if (strcmp(iff->name, name) == 0) break;
+	}
+	if (iff == NULL) log_warn("interfaces", "Not found interfaces device for name: %s", name);
+	return iff;
+}
+
 /**
  * Allocate the default local port. This port will be cloned each time we need a
  * new local port.
@@ -170,14 +136,6 @@ lldpd_alloc_default_local_port(struct lldpd *cfg)
 		calloc(1, sizeof(struct lldpd_port))) == NULL)
 		fatal("main", NULL);
 
-#ifdef ENABLE_DOT1
-	TAILQ_INIT(&port->p_vlans);
-	TAILQ_INIT(&port->p_ppvids);
-	TAILQ_INIT(&port->p_pids);
-#endif
-#ifdef ENABLE_CUSTOM
-	TAILQ_INIT(&port->p_custom_list);
-#endif
 	cfg->g_default_local_port = port;
 }
 
@@ -201,14 +159,6 @@ lldpd_clone_port(struct lldpd_port *destination, struct lldpd_port *source)
 	memcpy(destination, cloned, sizeof(struct lldpd_port));
 	free(cloned);
 	free(output);
-#ifdef ENABLE_DOT1
-	marshal_repair_tailq(lldpd_vlan, &destination->p_vlans, v_entries);
-	marshal_repair_tailq(lldpd_ppvid, &destination->p_ppvids, p_entries);
-	marshal_repair_tailq(lldpd_pi, &destination->p_pids, p_entries);
-#endif
-#ifdef ENABLE_CUSTOM
-	marshal_repair_tailq(lldpd_custom, &destination->p_custom_list, next);
-#endif
 	return 0;
 }
 
@@ -236,14 +186,6 @@ lldpd_alloc_hardware(struct lldpd *cfg, char *name, int index)
 	hardware->h_lport.p_chassis = LOCAL_CHASSIS(cfg);
 	hardware->h_lport.p_chassis->c_refcount++;
 	TAILQ_INIT(&hardware->h_rports);
-
-#ifdef ENABLE_LLDPMED
-	if (LOCAL_CHASSIS(cfg)->c_med_cap_available) {
-		hardware->h_lport.p_med_cap_enabled = LLDP_MED_CAP_CAP;
-		if (!cfg->g_config.c_noinventory)
-			hardware->h_lport.p_med_cap_enabled |= LLDP_MED_CAP_IV;
-	}
-#endif
 
 	levent_hardware_init(hardware);
 	return hardware;
@@ -358,9 +300,6 @@ notify_clients_deletion(struct lldpd_hardware *hardware,
 		rport->p_descr));
 	levent_ctl_notify(hardware->h_ifname, NEIGHBOR_CHANGE_DELETED,
 	    rport);
-#ifdef USE_SNMP
-	agent_notify(hardware, NEIGHBOR_CHANGE_DELETED, rport);
-#endif
 }
 
 static void
@@ -522,7 +461,7 @@ lldpd_guess_type(struct lldpd *cfg, char *frame, int s)
 			     j < sizeof(cfg->g_protocols[0].mac)/sizeof(cfg->g_protocols[0].mac[0]);
 			     j++) {
 				if (memcmp(frame, cfg->g_protocols[i].mac[j], ETHER_ADDR_LEN) == 0) {
-					log_debug("decode", "guessed protocol is %s (from MAC address)",
+					log_debug("decode", "guessed protocol is %s (from GUID)",
 					    cfg->g_protocols[i].name);
 					return cfg->g_protocols[i].mode;
 				}
@@ -539,14 +478,15 @@ lldpd_guess_type(struct lldpd *cfg, char *frame, int s)
 }
 
 static void
-lldpd_decode(struct lldpd *cfg, char *frame, int s,
+lldpd_decode(struct lldpd *cfg, char *buff, int s,
     struct lldpd_hardware *hardware)
 {
 	int i;
 	struct lldpd_chassis *chassis, *ochassis = NULL;
 	struct lldpd_port *port, *oport = NULL, *aport;
+	struct interfaces_device *dev;
 	int guess = LLDPD_MODE_LLDP;
-
+	char *frame = buff;
 	log_debug("decode", "decode a received frame on %s",
 	    hardware->h_ifname);
 
@@ -556,15 +496,11 @@ lldpd_decode(struct lldpd *cfg, char *frame, int s,
 		return;
 	}
 
-	/* Decapsulate VLAN frames */
-	struct ether_header eheader;
-	memcpy(&eheader, frame, sizeof(struct ether_header));
-	if (eheader.ether_type == htons(ETHERTYPE_VLAN)) {
-		/* VLAN decapsulation means to shift 4 bytes left the frame from
-		 * offset 2*ETHER_ADDR_LEN */
-		memmove(frame + 2*ETHER_ADDR_LEN, frame + 2*ETHER_ADDR_LEN + 4, s - 2*ETHER_ADDR_LEN);
-		s -= 4;
-	}
+	dev = lldpd_get_device(cfg, hardware->h_ifname);
+	if (dev == NULL)
+		return;
+
+	frame += sizeof(struct ub_link_header);
 
 	TAILQ_FOREACH(oport, &hardware->h_rports, p_entries) {
 		if ((oport->p_lastframe != NULL) &&
@@ -724,33 +660,13 @@ lldpd_decode(struct lldpd *cfg, char *frame, int s,
 			port->p_descr,
 			i));
 		levent_ctl_notify(hardware->h_ifname, NEIGHBOR_CHANGE_UPDATED, port);
-#ifdef USE_SNMP
-		agent_notify(hardware, NEIGHBOR_CHANGE_UPDATED, port);
-#endif
 	} else {
 		TRACE(LLDPD_NEIGHBOR_NEW(hardware->h_ifname,
 			chassis->c_name,
 			port->p_descr,
 			i));
 		levent_ctl_notify(hardware->h_ifname, NEIGHBOR_CHANGE_ADDED, port);
-#ifdef USE_SNMP
-		agent_notify(hardware, NEIGHBOR_CHANGE_ADDED, port);
-#endif
 	}
-
-#ifdef ENABLE_LLDPMED
-	if (!oport && port->p_chassis->c_med_type) {
-		/* New neighbor, fast start */
-		if (hardware->h_cfg->g_config.c_enable_fast_start &&
-		    !hardware->h_tx_fast) {
-			log_debug("decode", "%s: entering fast start due to "
-			    "new neighbor", hardware->h_ifname);
-			hardware->h_tx_fast = hardware->h_cfg->g_config.c_tx_fast_init;
-		}
-
-		levent_schedule_pdu(hardware);
-	}
-#endif
 
 	return;
 }
@@ -983,46 +899,176 @@ lldpd_hide_all(struct lldpd *cfg)
 	}
 }
 
-/* If PD device and PSE allocated power, echo back this change. If we have
- * several LLDP neighbors, we use the latest updated. */
-static void
-lldpd_dot3_power_pd_pse(struct lldpd_hardware *hardware)
+static char *
+lldpd_get_tlv_name(int tlv_type)
 {
-#ifdef ENABLE_DOT3
-	struct lldpd_port *port, *selected_port = NULL;
-	/* Are we a PD device? */
-	if (hardware->h_lport.p_power.devicetype != LLDP_DOT3_POWER_PD)
+	/* UB support TLV type 0-8, parse them only */
+	switch (tlv_type) {
+	case LLDP_TLV_END:
+		return "End of LLDPDU";
+	case LLDP_TLV_CHASSIS_ID:
+		return "Chassis ID";
+	case LLDP_TLV_PORT_ID:
+		return "Port ID";
+	case LLDP_TLV_TTL:
+		return "Time To Live";
+	case LLDP_TLV_PORT_DESCR:
+		return "Port Description";
+	case LLDP_TLV_SYSTEM_NAME:
+		return "System Name";
+	case LLDP_TLV_SYSTEM_DESCR:
+		return "System Description";
+	case LLDP_TLV_SYSTEM_CAP:
+		return "System Capabilities";
+	case LLDP_TLV_MGMT_ADDR:
+		return "Management Address";
+	default:
+		return NULL;
+	}
+}
+
+static int
+lldpd_dump_tlv_value_per_line(const char *token, const u_int8_t *pos, int tlv_size)
+{
+	char *buffer, *buffer_pos;
+	int ret, i;
+
+	/* A maximum of 16 bytes should be output per line. */
+	if (tlv_size >= GUID_LEN) {
+		log_dfx(token, "%.2x%.2x %.2x%.2x %.2x%.2x %.2x%.2x "
+					   "%.2x%.2x %.2x%.2x %.2x%.2x %.2x%.2x",
+					   pos[HW_ADDR0], pos[HW_ADDR1], pos[HW_ADDR2], pos[HW_ADDR3], pos[HW_ADDR4],
+					   pos[HW_ADDR5], pos[HW_ADDR6], pos[HW_ADDR7], pos[HW_ADDR8], pos[HW_ADDR9],
+					   pos[HW_ADDR10], pos[HW_ADDR11], pos[HW_ADDR12],
+					   pos[HW_ADDR13], pos[HW_ADDR14], pos[HW_ADDR15]);
+		return GUID_LEN;
+	}
+
+	/* 1 byte takes 2 places in %.2x, an extra place for blank */
+	buffer = (char *)calloc(tlv_size * DFX_PLACE_NUM, sizeof(char));
+	if (!buffer) {
+		log_dfx(token, "unable to allocate memory for tlv value");
+		return -1;
+	}
+
+	buffer_pos = buffer;
+	for (i = 0; i < tlv_size; i++) {
+		ret = sprintf(buffer_pos, "%.2x", pos[i]);
+		if (ret < 0) {
+			log_dfx(token, "unable to compose tlv value");
+			free(buffer);
+			return -1;
+		}
+
+		buffer_pos += ret;
+		if (i % DFX_BYTE_NUM == 1)
+			strcat(buffer_pos++, " ");
+	}
+	log_dfx(token, "%s", buffer);
+	free(buffer);
+	return tlv_size;
+}
+
+static void
+lldpd_dump_tlvs(const char *token, const u_int8_t *position, int len)
+{
+	int tlv_size, tlv_type, ret;
+	char *tlv_name;
+	int length = len;
+	const u_int8_t *pos = position;
+
+	while (length >= sizeof(u_int16_t)) {
+		tlv_size = PEEK_UINT16;
+		tlv_type = tlv_size >> TLV_INFO_BITS;
+		tlv_size = tlv_size & 0x1ff;
+		tlv_name = lldpd_get_tlv_name(tlv_type);
+		if (tlv_name)
+			log_dfx(token, "TLV type: %s", tlv_name);
+		else
+			log_dfx(token, "TLV type: %d", tlv_type);
+		log_dfx(token, "TLV length: %d", tlv_size);
+		if (tlv_type == LLDP_TLV_END)
+			return;
+		log_dfx(token, "TLV value:");
+
+		if (length < tlv_size)
+			tlv_size = length;
+		length -= tlv_size;
+
+		while (tlv_size > 0) {
+			ret = lldpd_dump_tlv_value_per_line(token, pos, tlv_size);
+			if (ret < 0)
+				return;
+			tlv_size -= ret;
+			pos += ret;
+		}
+	}
+}
+
+static void
+lldpd_dump_ub_packet(const char *token, const char *packet, int len)
+{
+	struct ub_link_header ub_header;
+	u_int8_t *pos;
+	int length = len;
+
+	if (length < sizeof(struct ub_link_header))
 		return;
-	TAILQ_FOREACH(port, &hardware->h_rports, p_entries) {
-		if (port->p_hidden_in)
-			continue;
 
-		if (port->p_protocol != LLDPD_MODE_LLDP && port->p_protocol != LLDPD_MODE_CDPV2)
-			continue;
+	pos = (u_int8_t *)packet;
+	PEEK_BYTES(&ub_header, sizeof(struct ub_link_header));
+	ub_header.ub_protocol = htons(ub_header.ub_protocol);
+	if (ub_header.ub_protocol != LLDP_PROTO || ub_header.ub_cfg != UB_CFG_TYPE)
+		return;
 
-		if (port->p_power.devicetype != LLDP_DOT3_POWER_PSE)
-			continue;
-		if (!selected_port || port->p_lastupdate > selected_port->p_lastupdate)
-			selected_port = port;
+	log_dfx(token, "Parse Packet:");
+	log_dfx(token, "Type: UB");
+	log_dfx(token, "CFG: %u", ub_header.ub_cfg);
+	/* UB GUID has length 16, show every byte inside */
+	log_dfx(token, "dGUID: %.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x:"
+				   "%.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",
+				   ub_header.ub_dguid[HW_ADDR0], ub_header.ub_dguid[HW_ADDR1],
+				   ub_header.ub_dguid[HW_ADDR2], ub_header.ub_dguid[HW_ADDR3],
+				   ub_header.ub_dguid[HW_ADDR4], ub_header.ub_dguid[HW_ADDR5],
+				   ub_header.ub_dguid[HW_ADDR6], ub_header.ub_dguid[HW_ADDR7],
+				   ub_header.ub_dguid[HW_ADDR8], ub_header.ub_dguid[HW_ADDR9],
+				   ub_header.ub_dguid[HW_ADDR10], ub_header.ub_dguid[HW_ADDR11],
+				   ub_header.ub_dguid[HW_ADDR12], ub_header.ub_dguid[HW_ADDR13],
+				   ub_header.ub_dguid[HW_ADDR14], ub_header.ub_dguid[HW_ADDR15]);
+	log_dfx(token, "sGUID: %.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x:"
+				   "%.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",
+				   ub_header.ub_sguid[HW_ADDR0], ub_header.ub_sguid[HW_ADDR1],
+				   ub_header.ub_sguid[HW_ADDR2], ub_header.ub_sguid[HW_ADDR3],
+				   ub_header.ub_sguid[HW_ADDR4], ub_header.ub_sguid[HW_ADDR5],
+				   ub_header.ub_sguid[HW_ADDR6], ub_header.ub_sguid[HW_ADDR7],
+				   ub_header.ub_sguid[HW_ADDR8], ub_header.ub_sguid[HW_ADDR9],
+				   ub_header.ub_sguid[HW_ADDR10], ub_header.ub_sguid[HW_ADDR11],
+				   ub_header.ub_sguid[HW_ADDR12], ub_header.ub_sguid[HW_ADDR13],
+				   ub_header.ub_sguid[HW_ADDR14], ub_header.ub_sguid[HW_ADDR15]);
+	log_dfx(token, "Protocol: 0x%.3x", ub_header.ub_protocol);
+
+	PEEK_DISCARD(sizeof(struct ether_header));
+	lldpd_dump_tlvs(token, pos, length);
+	log_dfx(token, "End Parse Packet");
+}
+
+void
+lldpd_dump_packet(const char *token, const char *packet, int length, struct lldpd_hardware *hardware)
+{
+	struct interfaces_device *iface;
+
+	if (!token || !packet || !hardware)
+		return;
+
+	iface = lldpd_get_device(hardware->h_cfg, hardware->h_ifname);
+	if (!iface)
+		return;
+
+	if (iface->dev_type == ARPHRD_UB) {
+		lldpd_dump_ub_packet(token, packet, length);
+	} else {
+		log_dfx(token, "skip dump packet for unknown dev_type %d", iface->dev_type);
 	}
-	if (selected_port && selected_port->p_power.allocated != hardware->h_lport.p_power.allocated) {
-		log_info("receive", "for %s, PSE told us allocated is now %d instead of %d",
-		    hardware->h_ifname,
-		    selected_port->p_power.allocated,
-		    hardware->h_lport.p_power.allocated);
-		hardware->h_lport.p_power.allocated = selected_port->p_power.allocated;
-		hardware->h_lport.p_power.allocated_a = selected_port->p_power.allocated_a;
-		hardware->h_lport.p_power.allocated_b = selected_port->p_power.allocated_b;
-		levent_schedule_pdu(hardware);
-	}
-
-#ifdef ENABLE_CDP
-	if (selected_port && selected_port->p_cdp_power.management_id != hardware->h_lport.p_cdp_power.management_id) {
-		hardware->h_lport.p_cdp_power.management_id = selected_port->p_cdp_power.management_id;
-	}
-#endif
-
-#endif
 }
 
 void
@@ -1057,24 +1103,43 @@ lldpd_recv(struct lldpd *cfg, struct lldpd_hardware *hardware, int fd)
 		return;
 	}
 	hardware->h_rx_cnt++;
+	lldpd_dump_packet("receive", buffer, n, hardware);
 	log_debug("receive", "decode received frame on %s",
 	    hardware->h_ifname);
 	TRACE(LLDPD_FRAME_RECEIVED(hardware->h_ifname, buffer, (size_t)n));
 	lldpd_decode(cfg, buffer, n, hardware);
 	lldpd_hide_all(cfg); /* Immediatly hide */
-	lldpd_dot3_power_pd_pse(hardware);
 	lldpd_count_neighbors(cfg);
 	free(buffer);
 }
 
+static int lldpd_send_status_check(struct lldpd_hardware *hardware)
+{
+	if (hardware->h_cfg->g_config.c_receiveonly) {
+		log_dfx("send", "ub-lldpd is rx-only");
+		return 1;
+	}
+	if (hardware->h_cfg->g_config.c_paused) {
+		log_dfx("send", "ub-lldpd is paused.");
+		return 1;
+	}
+	if (hardware->h_lport.p_disable_tx) {
+		log_dfx("send", "ub-lldpd tx is disable");
+		return 1;
+	}
+	if ((hardware->h_flags & IFF_RUNNING) == 0) {
+		log_dfx("send", "hardware %s is not IFF_RUNNING", hardware->h_ifname);
+		return 1;
+	}
+	return 0;
+}
+
+
 static void
 lldpd_send_shutdown(struct lldpd_hardware *hardware)
 {
-	struct lldpd *cfg = hardware->h_cfg;
-	if (cfg->g_config.c_receiveonly || cfg->g_config.c_paused) return;
-	if (hardware->h_lport.p_disable_tx) return;
-	if ((hardware->h_flags & IFF_RUNNING) == 0)
-		return;
+	if (lldpd_send_status_check(hardware))
+	    return;
 
 	/* It's safe to call `lldp_send_shutdown()` because shutdown LLDPU will
 	 * only be emitted if LLDP was sent on that port. */
@@ -1090,10 +1155,8 @@ lldpd_send(struct lldpd_hardware *hardware)
 	struct lldpd_port *port;
 	int i, sent;
 
-	if (cfg->g_config.c_receiveonly || cfg->g_config.c_paused) return;
-	if (hardware->h_lport.p_disable_tx) return;
-	if ((hardware->h_flags & IFF_RUNNING) == 0)
-		return;
+	if (lldpd_send_status_check(hardware))
+	    return;
 
 	log_debug("send", "send PDU on %s", hardware->h_ifname);
 	sent = 0;
@@ -1145,23 +1208,6 @@ lldpd_send(struct lldpd_hardware *hardware)
 			log_warnx("send", "no protocol enabled, dunno what to send");
 	}
 }
-
-#ifdef ENABLE_LLDPMED
-static void
-lldpd_med(struct lldpd_chassis *chassis)
-{
-	static short int once = 0;
-	if (!once) {
-		chassis->c_med_hw = dmi_hw();
-		chassis->c_med_fw = dmi_fw();
-		chassis->c_med_sn = dmi_sn();
-		chassis->c_med_manuf = dmi_manuf();
-		chassis->c_med_model = dmi_model();
-		chassis->c_med_asset = dmi_asset();
-		once = 1;
-	}
-}
-#endif
 
 static int
 lldpd_routing_enabled(struct lldpd *cfg)
@@ -1231,16 +1277,6 @@ lldpd_update_localchassis(struct lldpd *cfg)
 	} else
 		LOCAL_CHASSIS(cfg)->c_cap_enabled &= ~LLDP_CAP_ROUTER;
 
-#ifdef ENABLE_LLDPMED
-	if (LOCAL_CHASSIS(cfg)->c_cap_available & LLDP_CAP_TELEPHONE)
-		LOCAL_CHASSIS(cfg)->c_cap_enabled |= LLDP_CAP_TELEPHONE;
-	lldpd_med(LOCAL_CHASSIS(cfg));
-	free(LOCAL_CHASSIS(cfg)->c_med_sw);
-	if (cfg->g_config.c_advertise_version)
-		LOCAL_CHASSIS(cfg)->c_med_sw = strdup(un.release);
-	else
-		LOCAL_CHASSIS(cfg)->c_med_sw = strdup("Unknown");
-#endif
 	if ((LOCAL_CHASSIS(cfg)->c_cap_available & LLDP_CAP_STATION) &&
 		(LOCAL_CHASSIS(cfg)->c_cap_enabled == 0))
 		LOCAL_CHASSIS(cfg)->c_cap_enabled = LLDP_CAP_STATION;
@@ -1311,7 +1347,7 @@ lldpd_exit(struct lldpd *cfg)
 {
 	char *lockname = NULL;
 	struct lldpd_hardware *hardware, *hardware_next;
-	log_debug("main", "exit lldpd");
+	log_debug("main", "exit ub-lldpd");
 
 	TAILQ_FOREACH(hardware, &cfg->g_hardware, h_entries)
 		lldpd_send_shutdown(hardware);
@@ -1374,22 +1410,22 @@ lldpd_configure(int use_syslog, int debug, const char *path, const char *ctlname
 			if (devnull > 2) close(devnull);
 
 			if (config_path) {
-				execl(path, "lldpcli", sdebug,
+				execl(path, "ub-lldpcli", sdebug,
 				    "-u", ctlname,
 				    "-C", config_path,
 				    "resume",
 				    (char *)NULL);
 			} else {
-				execl(path, "lldpcli", sdebug,
+				execl(path, "ub-lldpcli", sdebug,
 				    "-u", ctlname,
-				    "-C", SYSCONFDIR "/lldpd.conf",
-				    "-C", SYSCONFDIR "/lldpd.d",
+				    "-C", SYSCONFDIR "/ub-lldpd.conf",
+				    "-C", SYSCONFDIR "/ub-lldpd.d",
 				    "resume",
 				    (char *)NULL);
 			}
 
 			log_warn("main", "unable to execute %s", path);
-			log_warnx("main", "configuration is incomplete, lldpd needs to be unpaused");
+			log_warnx("main", "configuration is incomplete, ub-lldpd needs to be unpaused");
 		}
 		_exit(127);
 		break;
@@ -1437,14 +1473,12 @@ static const struct intint filters[] = {
 	{ -1, 0 }
 };
 
-#ifndef HOST_OS_OSX
 /**
  * Tell if we have been started by systemd.
  */
 static int
 lldpd_started_by_systemd()
 {
-#ifdef HOST_OS_LINUX
 	int fd = -1;
 	const char *notifysocket = getenv("NOTIFY_SOCKET");
 	if (!notifysocket ||
@@ -1481,11 +1515,7 @@ lldpd_started_by_systemd()
 	}
 	close(fd);
 	return 1;
-#else
-	return 0;
-#endif
 }
-#endif
 
 #ifdef HOST_OS_LINUX
 static void
@@ -1513,12 +1543,9 @@ version_check(void)
 	    (version_min[0] == version_cur[0] && version_min[1] > version_cur[1]) ||
 	    (version_min[0] == version_cur[0] && version_min[1] == version_cur[1] &&
 		version_min[2] > version_cur[2])) {
-		log_warnx("lldpd", "minimal kernel version required is %s, got %s",
+		log_warnx("ub-lldpd", "minimal kernel version required is %s, got %s",
 		    MIN_LINUX_KERNEL_VERSION, uts.release);
-		log_warnx("lldpd", "lldpd may be unable to detect bonds and bridges correctly");
-#ifndef ENABLE_OLDIES
-		log_warnx("lldpd", "consider recompiling with --enable-oldies option");
-#endif
+		log_warnx("ub-lldpd", "ub-lldpd may be unable to detect bonds and bridges correctly");
 	}
 }
 #else
@@ -1532,24 +1559,16 @@ lldpd_main(int argc, char *argv[], char *envp[])
 	struct lldpd_chassis *lchassis;
 	int ch, debug = 0, use_syslog = 1, daemonize = 1;
 	const char *errstr;
-#ifdef USE_SNMP
-	int snmp = 0;
-	const char *agentx = NULL;	/* AgentX socket */
-#endif
 	const char *ctlname = NULL;
 	char *mgmtp = NULL;
 	char *cidp = NULL;
 	char *interfaces = NULL;
-	/* We do not want more options here. Please add them in lldpcli instead
+	/* We do not want more options here. Please add them in ub-lldpcli instead
 	 * unless there is a very good reason. Most command-line options will
 	 * get deprecated at some point. */
-	char *popt, opts[] =
-	    "H:vhkrdD:p:xX:m:u:4:6:I:C:p:M:P:S:iL:O:@                    ";
+	char *popt,
+	    opts[] = "H:vhkrdD:Fp:m:u:4:6:I:C:p:P:S:L:O:@                    ";
 	int i, found, advertise_version = 1;
-#ifdef ENABLE_LLDPMED
-	int lldpmed = 0, noinventory = 0;
-	int enable_fast_start = 1;
-#endif
 	char *descr_override = NULL;
 	char *platform_override = NULL;
 	char *lsb_release = NULL;
@@ -1644,43 +1663,6 @@ lldpd_main(int argc, char *argv[], char *envp[])
 		case 'k':
 			advertise_version = 0;
 			break;
-#ifdef ENABLE_LLDPMED
-		case 'M':
-			lldpmed = strtonum(optarg, 1, 4, &errstr);
-			if (errstr) {
-				fprintf(stderr, "-M requires an argument between 1 and 4\n");
-				usage();
-			}
-			break;
-		case 'i':
-			noinventory = 1;
-			break;
-#else
-		case 'M':
-		case 'i':
-			fprintf(stderr, "LLDP-MED support is not built-in\n");
-			usage();
-			break;
-#endif
-#ifdef USE_SNMP
-		case 'x':
-			snmp = 1;
-			break;
-		case 'X':
-			if (agentx) {
-				fprintf(stderr, "-X can only be used once\n");
-				usage();
-			}
-			snmp = 1;
-			agentx = optarg;
-			break;
-#else
-		case 'x':
-		case 'X':
-			fprintf(stderr, "SNMP support is not built-in\n");
-			usage();
-#endif
-			break;
                 case 'S':
 			if (descr_override) {
 				fprintf(stderr, "-S can only be used once\n");
@@ -1711,6 +1693,9 @@ lldpd_main(int argc, char *argv[], char *envp[])
 			}
 			config_file = optarg;
 			break;
+		case 'F':
+			log_dfx_enable();
+			break;
 		default:
 			found = 0;
 			for (i=0; protos[i].mode != 0; i++) {
@@ -1725,7 +1710,7 @@ lldpd_main(int argc, char *argv[], char *envp[])
 	}
 
 	if (version) {
-		version_display(stdout, "lldpd", version > 1);
+		version_display(stdout, "ub-lldpd", version > 1);
 		exit(0);
 	}
 
@@ -1754,7 +1739,8 @@ lldpd_main(int argc, char *argv[], char *envp[])
 			if (fd > 2) close(fd);
 		}
 	}
-	log_debug("main", "lldpd " PACKAGE_VERSION " starting...");
+	log_debug("main", "ub-lldpd " PACKAGE_VERSION " starting...");
+	log_dfx("main", "ub-lldpd dfx output enabled");
 	version_check();
 
 	/* Grab uid and gid to use for priv sep */
@@ -1827,7 +1813,6 @@ lldpd_main(int argc, char *argv[], char *envp[])
 	signal(SIGHUP, SIG_IGN);
 
 	/* Daemonization, unless started by systemd or launchd or debug */
-#ifndef HOST_OS_OSX
 	if (!lldpd_started_by_systemd() && daemonize) {
 		int pid;
 		char *spid;
@@ -1847,17 +1832,16 @@ lldpd_main(int argc, char *argv[], char *envp[])
 		free(spid);
 		close(pid);
 	}
-#endif
 
-	/* Configuration with lldpcli */
+	/* Configuration with ub-lldpcli */
 	if (lldpcli) {
 		if (!config_file) {
-			log_debug("main", "invoking lldpcli for default configuration locations");
+			log_debug("main", "invoking ub-lldpcli for default configuration locations");
 		} else {
-			log_debug("main", "invoking lldpcli for user supplied configuration location");
+			log_debug("main", "invoking ub-lldpcli for user supplied configuration location");
 		}
 		if (lldpd_configure(use_syslog, debug, lldpcli, ctlname, config_file) == -1)
-			fatal("main", "unable to spawn lldpcli");
+			fatal("main", "unable to spawn ub-lldpcli");
 	}
 
 	/* Try to read system information from /etc/os-release if possible.
@@ -1895,17 +1879,6 @@ lldpd_main(int argc, char *argv[], char *envp[])
 	cfg->g_config.c_ttl = cfg->g_config.c_tx_interval * cfg->g_config.c_tx_hold;
 	cfg->g_config.c_ttl = (cfg->g_config.c_ttl + 999) / 1000;
 	cfg->g_config.c_max_neighbors = LLDPD_MAX_NEIGHBORS;
-#ifdef ENABLE_LLDPMED
-	cfg->g_config.c_enable_fast_start = enable_fast_start;
-	cfg->g_config.c_tx_fast_init = LLDPD_FAST_INIT;
-	cfg->g_config.c_tx_fast_interval = LLDPD_FAST_TX_INTERVAL;
-#endif
-#ifdef USE_SNMP
-	cfg->g_snmp = snmp;
-	cfg->g_snmp_agentx = agentx;
-#endif /* USE_SNMP */
-	cfg->g_config.c_bond_slave_src_mac_type = \
-	    LLDP_BOND_SLAVE_SRC_MAC_TYPE_LOCALLY_ADMINISTERED;
 
 	/* Get ioctl socket */
 	log_debug("main", "get an ioctl socket");
@@ -1933,44 +1906,13 @@ lldpd_main(int argc, char *argv[], char *envp[])
 	    LLDP_CAP_ROUTER | LLDP_CAP_STATION;
 	cfg->g_config.c_mgmt_advertise = 1;
 	TAILQ_INIT(&lchassis->c_mgmt);
-#ifdef ENABLE_LLDPMED
-	if (lldpmed > 0) {
-		if (lldpmed == LLDP_MED_CLASS_III)
-			lchassis->c_cap_available |= LLDP_CAP_TELEPHONE;
-		lchassis->c_med_type = lldpmed;
-		lchassis->c_med_cap_available = LLDP_MED_CAP_CAP |
-		    LLDP_MED_CAP_IV | LLDP_MED_CAP_LOCATION |
-		    LLDP_MED_CAP_POLICY | LLDP_MED_CAP_MDI_PSE | LLDP_MED_CAP_MDI_PD;
-		cfg->g_config.c_noinventory = noinventory;
-	} else
-		cfg->g_config.c_noinventory = 1;
-#endif
 
 	log_debug("main", "initialize protocols");
 	cfg->g_protocols = protos;
 	for (i=0; protos[i].mode != 0; i++) {
-
 		/* With -ll, disable LLDP */
 		if (protos[i].mode == LLDPD_MODE_LLDP)
 			protos[i].enabled %= 3;
-		/* With -ccc force CDPV2, enable CDPV1 */
-		if (protos[i].mode == LLDPD_MODE_CDPV1 && protos[i].enabled == 3) {
-			protos[i].enabled = 1;
-		}
-		/* With -cc force CDPV1, enable CDPV2 */
-		if (protos[i].mode == LLDPD_MODE_CDPV2 && protos[i].enabled == 2) {
-			protos[i].enabled = 1;
-		}
-
-		/* With -cccc disable CDPV1, enable CDPV2 */
-		if (protos[i].mode == LLDPD_MODE_CDPV1 && protos[i].enabled >= 4) {
-			protos[i].enabled = 0;
-		}
-
-		/* With -cccc disable CDPV1, enable CDPV2; -ccccc will force CDPv2 */
-		if (protos[i].mode == LLDPD_MODE_CDPV2 && protos[i].enabled == 4) {
-			protos[i].enabled = 1;
-		}
 
 		if (protos[i].enabled > 1)
 			log_info("main", "protocol %s enabled and forced", protos[i].name);

@@ -43,9 +43,6 @@ check_received_port(
 	ck_assert_int_eq(rport->p_id_len, sport->p_id_len);
 	ck_assert_str_eq_n(rport->p_id, sport->p_id, sport->p_id_len);
 	ck_assert_str_eq(rport->p_descr, sport->p_descr);
-#ifdef ENABLE_DOT3
-	ck_assert_int_eq(rport->p_mfs, sport->p_mfs);
-#endif
 }
 
 static void
@@ -61,79 +58,6 @@ check_received_chassis(
 	ck_assert_int_eq(rchassis->c_cap_available, schassis->c_cap_available);
 	ck_assert_int_eq(rchassis->c_cap_enabled, schassis->c_cap_enabled);
 }
-
-#ifdef ENABLE_LLDPMED
-static void
-check_received_port_med(
-	struct lldpd_port *sport,
-	struct lldpd_port *rport)
-{
-	ck_assert_int_eq(rport->p_med_cap_enabled, sport->p_med_cap_enabled);
-	ck_assert_int_eq(rport->p_med_cap_enabled, sport->p_med_cap_enabled);
-	ck_assert_int_eq(
-		rport->p_med_location[LLDP_MED_LOCFORMAT_CIVIC-1].format,
-		sport->p_med_location[LLDP_MED_LOCFORMAT_CIVIC-1].format);
-	ck_assert_int_eq(
-		rport->p_med_location[LLDP_MED_LOCFORMAT_CIVIC-1].data_len,
-		sport->p_med_location[LLDP_MED_LOCFORMAT_CIVIC-1].data_len);
-	ck_assert_str_eq_n(
-		rport->p_med_location[LLDP_MED_LOCFORMAT_CIVIC-1].data,
-		sport->p_med_location[LLDP_MED_LOCFORMAT_CIVIC-1].data,
-		sport->p_med_location[LLDP_MED_LOCFORMAT_CIVIC-1].data_len);
-	ck_assert_int_eq(
-		rport->p_med_policy[LLDP_MED_APPTYPE_SOFTPHONEVOICE-1].type,
-		sport->p_med_policy[LLDP_MED_APPTYPE_SOFTPHONEVOICE-1].type);
-	ck_assert_int_eq(
-		rport->p_med_policy[LLDP_MED_APPTYPE_SOFTPHONEVOICE-1].tagged,
-		sport->p_med_policy[LLDP_MED_APPTYPE_SOFTPHONEVOICE-1].tagged);
-	ck_assert_int_eq(
-		rport->p_med_policy[LLDP_MED_APPTYPE_SOFTPHONEVOICE-1].vid,
-		sport->p_med_policy[LLDP_MED_APPTYPE_SOFTPHONEVOICE-1].vid);
-	ck_assert_int_eq(
-		rport->p_med_policy[LLDP_MED_APPTYPE_SOFTPHONEVOICE-1].priority,
-		sport->p_med_policy[LLDP_MED_APPTYPE_SOFTPHONEVOICE-1].priority);
-	ck_assert_int_eq(
-		rport->p_med_policy[LLDP_MED_APPTYPE_SOFTPHONEVOICE-1].dscp,
-		sport->p_med_policy[LLDP_MED_APPTYPE_SOFTPHONEVOICE-1].dscp);
-	ck_assert_int_eq(
-		rport->p_med_power.devicetype, sport->p_med_power.devicetype);
-	ck_assert_int_eq(rport->p_med_power.source, sport->p_med_power.source);
-	ck_assert_int_eq(rport->p_med_power.priority,
-		sport->p_med_power.priority);
-	ck_assert_int_eq(rport->p_med_power.val, sport->p_med_power.val);
-}
-
-static void
-check_received_chassis_med(
-	struct lldpd_chassis *schassis,
-	struct lldpd_chassis *rchassis)
-{
-	ck_assert_int_eq(rchassis->c_med_cap_available,
-		schassis->c_med_cap_available);
-	ck_assert_int_eq(rchassis->c_med_type, schassis->c_med_type);
-	ck_assert_str_eq(rchassis->c_med_hw, schassis->c_med_hw);
-	ck_assert_str_eq(rchassis->c_med_fw, schassis->c_med_fw);
-	ck_assert_str_eq(rchassis->c_med_sw, schassis->c_med_sw);
-	ck_assert_str_eq(rchassis->c_med_sn, schassis->c_med_sn);
-}
-#endif
-
-#ifdef ENABLE_DOT3
-static void
-check_received_port_dot3(
-	struct lldpd_port *sport,
-	struct lldpd_port *rport)
-{
-	ck_assert_int_eq(rport->p_aggregid, sport->p_aggregid);
-	ck_assert_int_eq(rport->p_macphy.autoneg_support,
-		sport->p_macphy.autoneg_support);
-	ck_assert_int_eq(rport->p_macphy.autoneg_enabled,
-		sport->p_macphy.autoneg_enabled);
-	ck_assert_int_eq(rport->p_macphy.autoneg_advertised,
-		sport->p_macphy.autoneg_advertised);
-	ck_assert_int_eq(rport->p_macphy.mau_type, sport->p_macphy.mau_type);
-}
-#endif
 
 START_TEST (test_send_rcv_basic)
 {
@@ -259,276 +183,6 @@ START_TEST (test_send_rcv_vlan_tx)
 }
 END_TEST
 
-#ifdef ENABLE_DOT1
-/* This test case tests send and receive of all DOT1 TLVs(2005 and 2009): 
-   Port Valn ID, VLAN, Port Protocol VLAN ID, Protocol Identity,
-   VID Usage Digest, Management VID, and 802.1ax Link Aggregation TLVs */
-START_TEST (test_send_rcv_dot1_tlvs)
-{
-	int n;
-	struct lldpd_vlan *rvlan, vlan1, vlan2, vlan3;
-	struct lldpd_ppvid ppvid, *rppvid;
-	struct lldpd_pi pi1, pi2, *rpi;
-	struct lldpd_chassis *nchassis = NULL;
-	struct lldpd_port *nport = NULL;
-	struct packet *pkt;
-
-	/* Populate port and chassis */
-	hardware.h_lport.p_id_subtype = LLDP_PORTID_SUBTYPE_LLADDR;
-	hardware.h_lport.p_id = macaddress;
-	hardware.h_lport.p_id_len = ETHER_ADDR_LEN;
-	hardware.h_lport.p_descr = "Fake port description";
-	hardware.h_lport.p_mfs = 1516;
-	hardware.h_lport.p_pvid = 1500;
-	chassis.c_id_subtype = LLDP_CHASSISID_SUBTYPE_LOCAL;
-	chassis.c_id = "Chassis name";
-	chassis.c_id_len = strlen(chassis.c_id);
-	chassis.c_name = "Second chassis";
-	chassis.c_descr = "Chassis description";
-	chassis.c_cap_available = LLDP_CAP_ROUTER | LLDP_CAP_BRIDGE;
-	chassis.c_cap_enabled = LLDP_CAP_ROUTER;
-	vlan1.v_name = "Voice"; vlan1.v_vid = 157;
-	vlan2.v_name = "Data"; vlan2.v_vid = 1247;
-	vlan3.v_name = "Control"; vlan3.v_vid = 741;
-	TAILQ_INSERT_TAIL(&hardware.h_lport.p_vlans, &vlan1, v_entries);
-	TAILQ_INSERT_TAIL(&hardware.h_lport.p_vlans, &vlan2, v_entries);
-	TAILQ_INSERT_TAIL(&hardware.h_lport.p_vlans, &vlan3, v_entries);
-	ppvid.p_cap_status = 3;
-	ppvid.p_ppvid = 1500;
-	TAILQ_INSERT_TAIL(&hardware.h_lport.p_ppvids, &ppvid, p_entries);
-	pi1.p_pi = "IEEE Link Aggregration Control Protocol 802.3ad";
-	pi1.p_pi_len = strlen(pi1.p_pi);
-	pi2.p_pi = "IEEE Link Layer Discovery Protocol 802.1ab-2005";
-	pi2.p_pi_len = strlen(pi2.p_pi);
-	TAILQ_INSERT_TAIL(&hardware.h_lport.p_pids, &pi1, p_entries);
-	TAILQ_INSERT_TAIL(&hardware.h_lport.p_pids, &pi2, p_entries);
-
-	/* Build packet */
-	n = lldp_send(&test_lldpd, &hardware);
-	if (n != 0) {
-		fail("unable to build packet");
-		return;
-	}
-	if (TAILQ_EMPTY(&pkts)) {
-		fail("no packets sent");
-		return;
-	}
-	pkt = TAILQ_FIRST(&pkts);
-	fail_unless(TAILQ_NEXT(pkt, next) == NULL, "more than one packet sent");
-
-	/* decode the retrieved packet calling lldp_decode() */
-	fail_unless(lldp_decode(NULL, pkt->data, pkt->size, &hardware,
-		&nchassis, &nport) != -1);
-	if (!nchassis || !nport) {
-		fail("unable to decode packet");
-		return;
-	}
-
-	/* verify port values */
-	check_received_port(&hardware.h_lport, nport);
-	/* verify chassis values */
-	check_received_chassis(&chassis, nchassis);
-
-	if (TAILQ_EMPTY(&nport->p_vlans)) {
-		fail("no VLAN");
-		return;
-	}
-
-	rvlan = TAILQ_FIRST(&nport->p_vlans);
-	ck_assert_int_eq(rvlan->v_vid, vlan1.v_vid);
-	ck_assert_str_eq(rvlan->v_name, vlan1.v_name);
-
-	rvlan = TAILQ_NEXT(rvlan, v_entries);
-	if (!rvlan) {
-		fail("no more VLAN");
-		return;
-	}
-	ck_assert_int_eq(rvlan->v_vid, vlan2.v_vid);
-	ck_assert_str_eq(rvlan->v_name, vlan2.v_name);
-
-	rvlan = TAILQ_NEXT(rvlan, v_entries);
-	if (!rvlan) {
-		fail("no more VLAN");
-		return;
-	}
-	ck_assert_int_eq(rvlan->v_vid, vlan3.v_vid);
-	ck_assert_str_eq(rvlan->v_name, vlan3.v_name);
-
-	rvlan = TAILQ_NEXT(rvlan, v_entries);
-	fail_unless(rvlan == NULL);
-
-	ck_assert_int_eq(nport->p_pvid, hardware.h_lport.p_pvid);
-
-	if (TAILQ_EMPTY(&nport->p_ppvids)) {
-		fail("no Port Protocal VLAN ID");
-		return;
-	}
-	rppvid = TAILQ_FIRST(&nport->p_ppvids);
-	ck_assert_int_eq(rppvid->p_cap_status, ppvid.p_cap_status);
-	ck_assert_int_eq(rppvid->p_ppvid, ppvid.p_ppvid);
-	
-	if (TAILQ_EMPTY(&nport->p_pids)) {
-		fail("no Protocal Identity TLV");
-		return;
-	}
-	rpi = TAILQ_FIRST(&nport->p_pids);
-	ck_assert_int_eq(rpi->p_pi_len, pi1.p_pi_len);
-	ck_assert_str_eq_n(rpi->p_pi, pi1.p_pi, pi1.p_pi_len);
-
-	rpi = TAILQ_NEXT(rpi, p_entries);
-	if (!rpi) {
-		fail("no more Protocol Identity TLVs");
-		return;
-	}
-	ck_assert_int_eq(rpi->p_pi_len, pi2.p_pi_len);
-	ck_assert_str_eq_n(rpi->p_pi, pi2.p_pi, pi2.p_pi_len);
-
-	rpi = TAILQ_NEXT(rpi, p_entries);
-	fail_unless(rpi == NULL);
-}
-END_TEST
-#endif
-
-#ifdef ENABLE_LLDPMED
-START_TEST (test_send_rcv_med)
-{
-	int n;
-	struct packet *pkt;
-	struct lldpd_chassis *nchassis = NULL;
-	struct lldpd_port *nport = NULL;
-
-	/* Populate port and chassis */
-	hardware.h_lport.p_id_subtype = LLDP_PORTID_SUBTYPE_LLADDR;
-	hardware.h_lport.p_id = macaddress;
-	hardware.h_lport.p_id_len = ETHER_ADDR_LEN;
-	hardware.h_lport.p_descr = "Fake port description";
-	hardware.h_lport.p_mfs = 1516;
-	chassis.c_id_subtype = LLDP_CHASSISID_SUBTYPE_LOCAL;
-	chassis.c_id = "Chassis name";
-	chassis.c_id_len = strlen(chassis.c_id);
-	chassis.c_name = "Third chassis";
-	chassis.c_descr = "Chassis description";
-	chassis.c_cap_available = LLDP_CAP_ROUTER | LLDP_CAP_BRIDGE;
-	chassis.c_cap_enabled = LLDP_CAP_ROUTER;
-	chassis.c_med_cap_available = LLDP_MED_CAP_CAP | LLDP_MED_CAP_POLICY |
-		LLDP_MED_CAP_LOCATION | LLDP_MED_CAP_MDI_PSE |
-		LLDP_MED_CAP_IV;
-	chassis.c_med_type = LLDP_MED_CLASS_III;
-	chassis.c_med_hw = "hardware rev 5";
-	chassis.c_med_fw = "47b5";
-	chassis.c_med_sw = "2.6.22b5";
-	chassis.c_med_sn = "SN 47842";
-	hardware.h_lport.p_med_cap_enabled = chassis.c_med_cap_available;
-	hardware.h_lport.p_med_location[LLDP_MED_LOCFORMAT_CIVIC-1].format =
-		LLDP_MED_LOCFORMAT_CIVIC;
-	hardware.h_lport.p_med_location[LLDP_MED_LOCFORMAT_CIVIC-1].data = "Your favorite city";
-	hardware.h_lport.p_med_location[LLDP_MED_LOCFORMAT_CIVIC-1].data_len = 
-		sizeof("Your favorite city");
-	hardware.h_lport.p_med_policy[LLDP_MED_APPTYPE_SOFTPHONEVOICE-1].type =
-		LLDP_MED_APPTYPE_SOFTPHONEVOICE;
-	hardware.h_lport.p_med_policy[LLDP_MED_APPTYPE_SOFTPHONEVOICE-1].tagged =
-		1;
-	hardware.h_lport.p_med_policy[LLDP_MED_APPTYPE_SOFTPHONEVOICE-1].vid =
-		51;
-	hardware.h_lport.p_med_policy[LLDP_MED_APPTYPE_SOFTPHONEVOICE-1].priority =
-		6;
-	hardware.h_lport.p_med_policy[LLDP_MED_APPTYPE_SOFTPHONEVOICE-1].dscp =
-		46;
-	hardware.h_lport.p_med_power.devicetype = LLDP_MED_POW_TYPE_PSE;
-	hardware.h_lport.p_med_power.source = LLDP_MED_POW_SOURCE_PRIMARY;
-	hardware.h_lport.p_med_power.priority = LLDP_MED_POW_PRIO_HIGH;
-	hardware.h_lport.p_med_power.val = 65;
-
-	/* Build packet */
-	n = lldp_send(&test_lldpd, &hardware);
-	if (n != 0) {
-		fail("unable to build packet");
-		return;
-	}
-	if (TAILQ_EMPTY(&pkts)) {
-		fail("no packets sent");
-		return;
-	}
-	pkt = TAILQ_FIRST(&pkts);
-	fail_unless(TAILQ_NEXT(pkt, next) == NULL, "more than one packet sent");
-
-	/* decode the retrieved packet calling lldp_decode() */
-	fail_unless(lldp_decode(NULL, pkt->data, pkt->size, &hardware,
-		&nchassis, &nport) != -1);
-	if (!nchassis || !nport) {
-		fail("unable to decode packet");
-		return;
-	}
-	/* verify port values */
-	check_received_port(&hardware.h_lport, nport);
-	/* verify chassis values */
-	check_received_chassis(&chassis, nchassis);
-
-	/* veridfy med content */
-	check_received_port_med(&hardware.h_lport, nport);
-	check_received_chassis_med(&chassis, nchassis);
-}
-END_TEST
-#endif
-
-#ifdef ENABLE_DOT3
-START_TEST (test_send_rcv_dot3)
-{
-	int n;
-	struct lldpd_chassis *nchassis = NULL;
-	struct lldpd_port *nport = NULL;
-	struct packet *pkt;
-
-	/* Populate port and chassis */
-	hardware.h_lport.p_id_subtype = LLDP_PORTID_SUBTYPE_IFNAME;
-	hardware.h_lport.p_id = "FastEthernet 1/5";
-	hardware.h_lport.p_id_len = strlen(hardware.h_lport.p_id);
-	hardware.h_lport.p_descr = "Fake port description";
-	hardware.h_lport.p_mfs = 1516;
-	hardware.h_lport.p_aggregid = 5;
-	hardware.h_lport.p_macphy.autoneg_support = 1;
-	hardware.h_lport.p_macphy.autoneg_enabled = 1;
-	hardware.h_lport.p_macphy.autoneg_advertised = LLDP_DOT3_LINK_AUTONEG_10BASE_T |
-		LLDP_DOT3_LINK_AUTONEG_10BASET_FD | LLDP_DOT3_LINK_AUTONEG_100BASE_TX |
-		LLDP_DOT3_LINK_AUTONEG_100BASE_TXFD;
-	hardware.h_lport.p_macphy.mau_type = LLDP_DOT3_MAU_100BASETXFD;
-	chassis.c_id_subtype = LLDP_CHASSISID_SUBTYPE_LLADDR;
-	chassis.c_id = macaddress;
-	chassis.c_id_len = ETHER_ADDR_LEN;
-	chassis.c_name = "Fourth chassis";
-	chassis.c_descr = "Long chassis description";
-	chassis.c_cap_available = chassis.c_cap_enabled = LLDP_CAP_ROUTER | LLDP_CAP_WLAN;
-
-	/* Build packet */
-	n = lldp_send(&test_lldpd, &hardware);
-	if (n != 0) {
-		fail("unable to build packet");
-		return;
-	}
-	if (TAILQ_EMPTY(&pkts)) {
-		fail("no packets sent");
-		return;
-	}
-	pkt = TAILQ_FIRST(&pkts);
-	fail_unless(TAILQ_NEXT(pkt, next) == NULL, "more than one packet sent");
-
-	/* decode the retrieved packet calling lldp_decode() */
-	fail_unless(lldp_decode(NULL, pkt->data, pkt->size, &hardware,
-		&nchassis, &nport) != -1);
-	if (!nchassis || !nport) {
-		fail("unable to decode packet");
-		return;
-	}
-	/* verify port values */
-	check_received_port(&hardware.h_lport, nport);
-	/* verify chassis values */
-	check_received_chassis(&chassis, nchassis);
-	/* verify dot3 values */
-	check_received_port_dot3(&hardware.h_lport, nport);
-}
-END_TEST
-#endif
-
 START_TEST (test_recv_min)
 {
 	char pkt1[] = {
@@ -592,7 +246,7 @@ END_TEST
 
 START_TEST (test_recv_lldpd)
 {
-	/* This is a frame generated by lldpd */
+	/* This is a frame generated by ub-lldpd */
 	char pkt1[] = {
 		0x01, 0x80, 0xc2, 0x00, 0x00, 0x0e, 0x00, 0x16,
 		0x17, 0x2f, 0xa1, 0xb6, 0x88, 0xcc, 0x02, 0x07,
@@ -800,31 +454,6 @@ Link Layer Discovery Protocol
 	ck_assert_int_eq(nchassis->c_mgmt.tqh_first->m_addr.inet.s_addr,
 	    (u_int32_t)inet_addr("10.238.80.75"));
 	ck_assert_int_eq(nchassis->c_mgmt.tqh_first->m_iface, 3);
-#ifdef ENABLE_DOT3
-	ck_assert_int_eq(nport->p_aggregid, 0);
-	ck_assert_int_eq(nport->p_macphy.autoneg_enabled, 1);
-	ck_assert_int_eq(nport->p_macphy.autoneg_support, 1);
-	ck_assert_int_eq(nport->p_macphy.autoneg_advertised,
-	    LLDP_DOT3_LINK_AUTONEG_1000BASE_TFD |
-	    LLDP_DOT3_LINK_AUTONEG_1000BASE_T |
-	    LLDP_DOT3_LINK_AUTONEG_100BASE_TXFD |
-	    LLDP_DOT3_LINK_AUTONEG_100BASE_TX |
-	    LLDP_DOT3_LINK_AUTONEG_10BASET_FD |
-	    LLDP_DOT3_LINK_AUTONEG_10BASE_T);
-	ck_assert_int_eq(nport->p_macphy.mau_type,
-	    LLDP_DOT3_MAU_100BASETXFD);
-	ck_assert_int_eq(nport->p_mfs, 1500);
-#endif
-#ifdef ENABLE_LLDPMED
-	ck_assert_int_eq(nchassis->c_med_type, 0);
-	ck_assert_str_eq(nchassis->c_med_hw, "ND991789702");
-	ck_assert_str_eq(nchassis->c_med_fw, "080012 "); /* Extra space */
-	ck_assert_str_eq(nchassis->c_med_sw, "2.6.29-2-amd64");
-	ck_assert_str_eq(nchassis->c_med_sn, "105820850009");
-	ck_assert_str_eq(nchassis->c_med_manuf, "NEC Computers SAS");
-	ck_assert_str_eq(nchassis->c_med_model, "POWERMATE VL350");
-	ck_assert_str_eq(nchassis->c_med_asset, "100207120");
-#endif
 }
 END_TEST
 
@@ -847,15 +476,6 @@ lldp_suite(void)
 	tcase_add_checked_fixture(tc_send, pcap_setup, pcap_teardown);
 	tcase_add_test(tc_send, test_send_rcv_basic);
 	tcase_add_test(tc_send, test_send_rcv_vlan_tx);
-#ifdef ENABLE_DOT1
-	tcase_add_test(tc_send, test_send_rcv_dot1_tlvs);
-#endif
-#ifdef ENABLE_LLDPMED
-	tcase_add_test(tc_send, test_send_rcv_med);
-#endif
-#ifdef ENABLE_DOT3
-	tcase_add_test(tc_send, test_send_rcv_dot3);
-#endif
 	suite_add_tcase(s, tc_send);
 
 	tcase_add_test(tc_receive, test_recv_min);

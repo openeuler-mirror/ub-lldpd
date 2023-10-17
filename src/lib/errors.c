@@ -28,7 +28,7 @@ lldpctl_strerror(lldpctl_error_t error)
 	case LLDPCTL_ERR_WOULDBLOCK: return "Requested operation would block";
 	case LLDPCTL_ERR_EOF: return "End of file reached";
 	case LLDPCTL_ERR_NOT_EXIST: return "The requested information does not exist";
-	case LLDPCTL_ERR_CANNOT_CONNECT: return "Unable to connect to lldpd daemon";
+	case LLDPCTL_ERR_CANNOT_CONNECT: return "Unable to connect to ub-lldpd daemon";
 	case LLDPCTL_ERR_INCORRECT_ATOM_TYPE: return "Provided atom is of incorrect type";
 	case LLDPCTL_ERR_SERIALIZATION: return "Error while serializing or unserializing data";
 	case LLDPCTL_ERR_INVALID_STATE: return "Other input/output operation already in progress";

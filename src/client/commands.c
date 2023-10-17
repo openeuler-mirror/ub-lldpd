@@ -103,7 +103,7 @@ struct cmd_node*
 commands_root(void)
 {
 	struct cmd_node *new = calloc(1, sizeof(struct cmd_node));
-	if (new == NULL) fatalx("lldpctl", "out of memory");
+	if (new == NULL) fatalx("ub-lldpctl", "out of memory");
 	TAILQ_INIT(&new->subentries);
 	return new;
 }
@@ -174,7 +174,7 @@ commands_new(struct cmd_node *root,
 {
 	struct cmd_node *new = calloc(1, sizeof(struct cmd_node));
 	if (new == NULL)
-		fatalx("lldpctl", "out of memory");
+		fatalx("ub-lldpctl", "out of memory");
 	new->token = token;
 	new->doc = doc;
 	new->validate = validate;
@@ -252,7 +252,7 @@ cmdenv_put(struct cmd_env *env,
 {
 	struct cmd_env_el *el = malloc(sizeof(struct cmd_env_el));
 	if (el == NULL) {
-		log_warn("lldpctl", "unable to allocate memory for new environment variable");
+		log_warn("ub-lldpctl", "unable to allocate memory for new environment variable");
 		return -1;
 	}
 	el->key = key;
@@ -276,7 +276,7 @@ cmdenv_pop(struct cmd_env *env, int n)
 {
 	while (n-- > 0) {
 		if (TAILQ_EMPTY(&env->stack)) {
-			log_warnx("lldpctl", "environment stack is empty");
+			log_warnx("ub-lldpctl", "environment stack is empty");
 			return -1;
 		}
 		struct cmd_env_stack *first = TAILQ_FIRST(&env->stack);
@@ -299,7 +299,7 @@ cmdenv_push(struct cmd_env *env, struct cmd_node *node)
 {
 	struct cmd_env_stack *el = malloc(sizeof(struct cmd_env_stack));
 	if (el == NULL) {
-		log_warn("lldpctl", "not enough memory to allocate a stack element");
+		log_warn("ub-lldpctl", "not enough memory to allocate a stack element");
 		return -1;
 	}
 	el->el = node;
@@ -348,7 +348,7 @@ struct candidate_word {
 /**
  * Execute or complete a command from the given node.
  *
- * @param conn    Connection to lldpd.
+ * @param conn    Connection to ub-lldpd.
  * @param w       Writer for output.
  * @param root    Root node we want to start from.
  * @param argc    Number of arguments.
@@ -379,7 +379,7 @@ _commands_execute(struct lldpctl_conn_t *conn, struct writer *w,
 	cmdenv_push(&env, root);
 	if (!completion)
 		for (n = 0; n < argc; n++)
-			log_debug("lldpctl", "argument %02d: `%s`", n, argv[n]);
+			log_debug("ub-lldpctl", "argument %02d: `%s`", n, argv[n]);
 	if (completion) *word = NULL;
 
 #define CAN_EXECUTE(candidate) \
@@ -403,7 +403,7 @@ _commands_execute(struct lldpctl_conn_t *conn, struct writer *w,
 		    (completion && env.argp == env.argc - 1))
 			goto end;
 		if (!completion)
-			log_debug("lldpctl", "process argument %02d: `%s`",
+			log_debug("ub-lldpctl", "process argument %02d: `%s`",
 			    env.argp, token);
 		TAILQ_FOREACH(candidate, &current->subentries, next) {
 			if (candidate->token &&
@@ -419,7 +419,7 @@ _commands_execute(struct lldpctl_conn_t *conn, struct writer *w,
 				if (!best) best = candidate;
 				else {
 					if (!completion)
-						log_warnx("lldpctl", "ambiguous token: %s (%s or %s)",
+						log_warnx("ub-lldpctl", "ambiguous token: %s (%s or %s)",
 						    token, candidate->token, best->token);
 					rc = -1;
 					goto end;
@@ -440,7 +440,7 @@ _commands_execute(struct lldpctl_conn_t *conn, struct writer *w,
 		if (!best && env.argp == env.argc) goto end;
 		if (!best) {
 			if (!completion)
-				log_warnx("lldpctl", "unknown command from argument %d: `%s`",
+				log_warnx("ub-lldpctl", "unknown command from argument %d: `%s`",
 				    env.argp + 1, token);
 			rc = -1;
 			goto end;
@@ -454,20 +454,20 @@ _commands_execute(struct lldpctl_conn_t *conn, struct writer *w,
 					if (lockname == NULL &&
 					    asprintf(&lockname, "%s.lock",
 					    ctlname) == -1) {
-						log_warnx("lldpctl",
+						log_warnx("ub-lldpctl",
 						    "not enough memory to build lock filename");
 						rc = -1;
 						goto end;
 					}
-					log_debug("lldpctl", "open %s for locking", lockname);
+					log_debug("ub-lldpctl", "open %s for locking", lockname);
 					if ((lockfd = open(lockname, O_RDWR)) == -1) {
-						log_warn("lldpctl", "cannot open lock %s", lockname);
+						log_warn("ub-lldpctl", "cannot open lock %s", lockname);
 						rc = -1;
 						goto end;
 					}
 				}
 				if (lockf(lockfd, F_LOCK, 0) == -1) {
-					log_warn("lldpctl", "cannot get lock on %s", lockname);
+					log_warn("ub-lldpctl", "cannot get lock on %s", lockname);
 					rc = -1;
 					close(lockfd); lockfd = -1;
 					goto end;
@@ -475,7 +475,7 @@ _commands_execute(struct lldpctl_conn_t *conn, struct writer *w,
 			}
 			rc = best->execute(conn, w, &env, best->arg) != 1 ? -1 : rc;
 			if (needlock && lockf(lockfd, F_ULOCK, 0) == -1) {
-				log_warn("lldpctl", "cannot unlock %s", lockname);
+				log_warn("ub-lldpctl", "cannot unlock %s", lockname);
 				close(lockfd); lockfd = -1;
 			}
 			if (rc == -1) goto end;
@@ -485,7 +485,7 @@ _commands_execute(struct lldpctl_conn_t *conn, struct writer *w,
 end:
 	if (!completion && !help && !complete) {
 		if (rc == 0 && env.argp != env.argc + 1) {
-			log_warnx("lldpctl", "incomplete command");
+			log_warnx("ub-lldpctl", "incomplete command");
 			rc = -1;
 		}
 	} else if (rc == 0 && (env.argp == env.argc - 1 || help || complete)) {
@@ -685,39 +685,21 @@ cmd_store_env_and_pop(struct lldpctl_conn_t *conn, struct writer *w,
  * @param key The key to store.
  * @return 1 if the key was stored
  */
-int
-cmd_store_env_value_and_pop(struct lldpctl_conn_t *conn, struct writer *w,
-    struct cmd_env *env, void *key)
-{
-	return (cmdenv_put(env, key, cmdenv_arg(env)) != -1 &&
-	    cmdenv_pop(env, 1) != -1);
-}
+#define CMDENV_POP_COUNT 2
+
 int
 cmd_store_env_value_and_pop2(struct lldpctl_conn_t *conn, struct writer *w,
     struct cmd_env *env, void *key)
 {
 	return (cmdenv_put(env, key, cmdenv_arg(env)) != -1 &&
-	    cmdenv_pop(env, 2) != -1);
+	    cmdenv_pop(env, CMDENV_POP_COUNT) != -1);
 }
+
 int
 cmd_store_env_value(struct lldpctl_conn_t *conn, struct writer *w,
     struct cmd_env *env, void *key)
 {
 	return (cmdenv_put(env, key, cmdenv_arg(env)) != -1);
-}
-int
-cmd_store_env_value_and_pop3(struct lldpctl_conn_t *conn, struct writer *w,
-    struct cmd_env *env, void *key)
-{
-	return (cmdenv_put(env, key, cmdenv_arg(env)) != -1 &&
-	    cmdenv_pop(env, 3) != -1);
-}
-int
-cmd_store_something_env_value_and_pop2(const char *what,
-    struct cmd_env *env, void *value)
-{
-	return (cmdenv_put(env, what, value) != -1 &&
-	    cmdenv_pop(env, 2) != -1);
 }
 int
 cmd_store_something_env_value(const char *what,
@@ -750,7 +732,7 @@ cmd_iterate_on_interfaces(struct lldpctl_conn_t *conn, struct cmd_env *env)
 		if (iter == NULL) {
 			iface_list = lldpctl_get_interfaces(conn);
 			if (!iface_list) {
-				log_warnx("lldpctl", "not able to get the list of interfaces. %s",
+				log_warnx("ub-lldpctl", "not able to get the list of interfaces. %s",
 				    lldpctl_last_strerror(conn));
 				return NULL;
 			}
@@ -836,21 +818,4 @@ cmd_restrict_ports(struct cmd_node *root)
 		NULL,
 		"Restrict configuration to the specified ports (comma-separated list)",
 		NULL, cmd_store_env_value_and_pop2, "ports");
-}
-
-/**
- * Restrict the command to specific protocol
- */
-void
-cmd_restrict_protocol(struct cmd_node *root)
-{
-	/* Restrict to some ports. */
-	commands_new(
-		commands_new(root,
-		    "protocol",
-		    "Restrict to specific protocol",
-		    cmd_check_no_env, NULL, "protocol"),
-		NULL,
-		"Restrict display to the specified protocol",
-		NULL, cmd_store_env_value_and_pop2, "protocol");
 }

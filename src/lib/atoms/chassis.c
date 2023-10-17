@@ -36,18 +36,6 @@ static lldpctl_map_t chassis_id_subtype_map[] = {
 	{ 0, NULL},
 };
 
-#ifdef ENABLE_LLDPMED
-
-static lldpctl_map_t chassis_med_type_map[] = {
-	{ LLDP_MED_CLASS_I,        "Generic Endpoint (Class I)" },
-	{ LLDP_MED_CLASS_II,       "Media Endpoint (Class II)" },
-	{ LLDP_MED_CLASS_III,      "Communication Device Endpoint (Class III)" },
-	{ LLDP_MED_NETWORK_DEVICE, "Network Connectivity Device" },
-	{ 0, NULL },
-};
-
-#endif
-
 static int
 _lldpctl_atom_new_chassis(lldpctl_atom_t *atom, va_list ap)
 {
@@ -144,25 +132,6 @@ _lldpctl_atom_get_str_chassis(lldpctl_atom_t *atom, lldpctl_key_t key)
 	case lldpctl_k_chassis_name: return chassis->c_name;
 	case lldpctl_k_chassis_descr: return chassis->c_descr;
 
-#ifdef ENABLE_LLDPMED
-	case lldpctl_k_chassis_med_type:
-		return map_lookup(chassis_med_type_map, chassis->c_med_type);
-	case lldpctl_k_chassis_med_inventory_hw:
-		return chassis->c_med_hw;
-	case lldpctl_k_chassis_med_inventory_sw:
-		return chassis->c_med_sw;
-	case lldpctl_k_chassis_med_inventory_fw:
-		return chassis->c_med_fw;
-	case lldpctl_k_chassis_med_inventory_sn:
-		return chassis->c_med_sn;
-	case lldpctl_k_chassis_med_inventory_manuf:
-		return chassis->c_med_manuf;
-	case lldpctl_k_chassis_med_inventory_model:
-		return chassis->c_med_model;
-	case lldpctl_k_chassis_med_inventory_asset:
-		return chassis->c_med_asset;
-#endif
-
 	default:
 		SET_ERROR(atom->conn, LLDPCTL_ERR_NOT_EXIST);
 		return NULL;
@@ -186,12 +155,6 @@ _lldpctl_atom_get_int_chassis(lldpctl_atom_t *atom, lldpctl_key_t key)
 		return chassis->c_cap_available;
 	case lldpctl_k_chassis_cap_enabled:
 		return chassis->c_cap_enabled;
-#ifdef ENABLE_LLDPMED
-	case lldpctl_k_chassis_med_type:
-		return chassis->c_med_type;
-	case lldpctl_k_chassis_med_cap:
-		return chassis->c_med_cap_available;
-#endif
 	default:
 		return SET_ERROR(atom->conn, LLDPCTL_ERR_NOT_EXIST);
 	}

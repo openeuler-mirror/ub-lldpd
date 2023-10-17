@@ -19,17 +19,17 @@
 #define LLDPCTL_H
 
 /**
- * @defgroup liblldpctl liblldpctl: library to interface with lldpd
+ * @defgroup liblldpctl liblldpctl: library to interface with ub-lldpd
  *
  * `liblldpctl` allows any program to convenienty query and modify the behaviour
- * of a running lldpd daemon.
+ * of a running ub-lldpd daemon.
  *
  * To use this library, use `pkg-config` to get the appropriate options:
- *   * `pkg-config --libs lldpctl` for `LIBS` or `LDFLAGS`
- *   * `pkg-config --cflags lldpctl` for `CFLAGS`
+ *   * `pkg-config --libs ub-lldpctl` for `LIBS` or `LDFLAGS`
+ *   * `pkg-config --cflags ub-lldpctl` for `CFLAGS`
  *
- * @warning This library is tightly coupled with lldpd. The library to use
- *   should be the one shipped with lldpd. Clients of the library are then tied
+ * @warning This library is tightly coupled with ub-lldpd. The library to use
+ *   should be the one shipped with ub-lldpd. Clients of the library are then tied
  *   by the classic API/ABI rules and may be compiled separatly.
  *
  * There are two important structures in this library: @c lldpctl_conn_t which
@@ -39,11 +39,11 @@
  * The library is expected to be reentrant and therefore thread-safe. It is
  * however not expected that a connection to be used in several thread
  * simultaneously. This also applies to the different pieces of information
- * gathered through this connection. Several connection to lldpd can be used
+ * gathered through this connection. Several connection to ub-lldpd can be used
  * simultaneously.
  *
  * The first step is to establish a connection. See @ref lldpctl_connection for
- * more information about this. The next step is to query the lldpd daemon. See
+ * more information about this. The next step is to query the ub-lldpd daemon. See
  * @ref lldpctl_atoms on how to do this.
  *
  * `liblldpctl` tries to handle errors in a coherent way. Any function returning
@@ -67,9 +67,9 @@ extern "C" {
 #include <sys/types.h>
 
 /**
- * @defgroup lldpctl_connection Managing connection to lldpd
+ * @defgroup lldpctl_connection Managing connection to ub-lldpd
  *
- * Connection with lldpd.
+ * Connection with ub-lldpd.
  *
  * This library does not handle IO. They are delegated to a set of functions to
  * allow a user to specify exactly how IO should be done. A user is expected to
@@ -96,7 +96,7 @@ extern "C" {
 const char* lldpctl_get_default_transport(void);
 
 /**
- * Structure referencing a connection with lldpd.
+ * Structure referencing a connection with ub-lldpd.
  *
  * This structure should be handled as opaque. It can be allocated
  * with @c lldpctl_new() and the associated resources will be freed
@@ -105,9 +105,9 @@ const char* lldpctl_get_default_transport(void);
 typedef struct lldpctl_conn_t lldpctl_conn_t;
 
 /**
- * Callback function invoked to send data to lldpd.
+ * Callback function invoked to send data to ub-lldpd.
  *
- * @param conn      Handle to the connection to lldpd.
+ * @param conn      Handle to the connection to ub-lldpd.
  * @param data      Bytes to be sent.
  * @param length    Length of provided data.
  * @param user_data Provided user data.
@@ -119,9 +119,9 @@ typedef ssize_t (*lldpctl_send_callback)(lldpctl_conn_t *conn,
     const uint8_t *data, size_t length, void *user_data);
 
 /**
- * Callback function invoked to receive data from lldpd.
+ * Callback function invoked to receive data from ub-lldpd.
  *
- * @param conn      Handle to the connection to lldpd.
+ * @param conn      Handle to the connection to ub-lldpd.
  * @param data      Buffer for receiving data
  * @param length    Maximum bytes we can receive
  * @param user_data Provided user data.
@@ -134,13 +134,13 @@ typedef ssize_t (*lldpctl_recv_callback)(lldpctl_conn_t *conn,
     const uint8_t *data, size_t length, void *user_data);
 
 /**
- * Function invoked when additional data is available from lldpd.
+ * Function invoked when additional data is available from ub-lldpd.
  *
  * This function should be invoked in case of asynchronous IO when new data is
- * available from lldpd (expected or unexpected).
+ * available from ub-lldpd (expected or unexpected).
  *
- * @param  conn      Handle to the connection to lldpd.
- * @param  data      Data received from lldpd.
+ * @param  conn      Handle to the connection to ub-lldpd.
+ * @param  data      Data received from ub-lldpd.
  * @param  length    Length of data received.
  * @return The number of bytes available or a negative integer if an error has
  *         occurred. 0 is not an error. It usually means that a notification has
@@ -149,12 +149,12 @@ typedef ssize_t (*lldpctl_recv_callback)(lldpctl_conn_t *conn,
 ssize_t lldpctl_recv(lldpctl_conn_t *conn, const uint8_t *data, size_t length);
 
 /**
- * Function invoked when there is an opportunity to send data to lldpd.
+ * Function invoked when there is an opportunity to send data to ub-lldpd.
  *
  * This function should be invoked in case of asynchronous IO when new data can
- * be written to lldpd.
+ * be written to ub-lldpd.
  *
- * @param  conn  Handle to the connection to lldpd.
+ * @param  conn  Handle to the connection to ub-lldpd.
  * @return The number of bytes processed or a negative integer if an error has
  *         occurred.
  */
@@ -166,7 +166,7 @@ ssize_t lldpctl_send(lldpctl_conn_t *conn);
  * This function should be invoked to check for notifications in the data that
  * has already been read. Its used typically for asynchronous connections.
  *
- * @param  conn  Handle to the connection to lldpd.
+ * @param  conn  Handle to the connection to ub-lldpd.
  * @return 0 to indicate maybe more data is available for processing
  *         !0 to indicate no data or insufficient data for processing
  */
@@ -174,12 +174,12 @@ int lldpctl_process_conn_buffer(lldpctl_conn_t *conn);
 
 
 /**
- * Allocate a new handler for connecting to lldpd.
+ * Allocate a new handler for connecting to ub-lldpd.
  *
  * @param  send      Callback to be used when sending   new data is requested.
  * @param  recv      Callback to be used when receiving new data is requested.
  * @param  user_data Data to pass to callbacks.
- * @return An handler to be used to connect to lldpd or @c NULL in
+ * @return An handler to be used to connect to ub-lldpd or @c NULL in
  *         case of error. In the later case, the error is probable an
  *         out of memory condition.
  *
@@ -191,13 +191,13 @@ lldpctl_conn_t *lldpctl_new(lldpctl_send_callback send,
     lldpctl_recv_callback recv, void *user_data);
 
 /**
- * Allocate a new handler for connecting to lldpd.
+ * Allocate a new handler for connecting to ub-lldpd.
  *
- * @param  ctlname   the Unix-domain socket to connect to lldpd.
+ * @param  ctlname   the Unix-domain socket to connect to ub-lldpd.
  * @param  send      Callback to be used when sending   new data is requested.
  * @param  recv      Callback to be used when receiving new data is requested.
  * @param  user_data Data to pass to callbacks.
- * @return An handler to be used to connect to lldpd or @c NULL in
+ * @return An handler to be used to connect to ub-lldpd or @c NULL in
  *         case of error. In the later case, the error is probable an
  *         out of memory condition.
  *
@@ -209,9 +209,9 @@ lldpctl_conn_t *lldpctl_new_name(const char *ctlname, lldpctl_send_callback send
     lldpctl_recv_callback recv, void *user_data);
 
 /**
- * Release resources associated with a connection to lldpd.
+ * Release resources associated with a connection to ub-lldpd.
  *
- * @param   conn Previously allocated handler to a connection to lldpd.
+ * @param   conn Previously allocated handler to a connection to ub-lldpd.
  * @return  0 on success or a negative integer
  *
  * @see lldpctl_new()
@@ -290,7 +290,7 @@ typedef enum {
 	 */
 	LLDPCTL_ERR_NOT_EXIST = -503,
 	/**
-	 * Cannot connect to the lldpd daemon. This error only happens with
+	 * Cannot connect to the ub-lldpd daemon. This error only happens with
 	 * default synchronous handlers.
 	 */
 	LLDPCTL_ERR_CANNOT_CONNECT = -504,
@@ -344,9 +344,9 @@ typedef enum {
 const char *lldpctl_strerror(lldpctl_error_t error);
 
 /**
- * Get the last error associated to a connection to lldpd.
+ * Get the last error associated to a connection to ub-lldpd.
  *
- * @param  conn Previously allocated handler to a connection to lldpd.
+ * @param  conn Previously allocated handler to a connection to ub-lldpd.
  * @return 0 if no error is currently registered. A negative integer
  *         otherwise.
  *
@@ -359,7 +359,7 @@ lldpctl_error_t lldpctl_last_error(lldpctl_conn_t *conn);
 /**
  * Describe the last error associate to a connection.
  *
- * @param conn Previously allocated handler to a connection to lldpd.
+ * @param conn Previously allocated handler to a connection to ub-lldpd.
  * @return Statically allocated string describing the error
  */
 #define lldpctl_last_strerror(conn) lldpctl_strerror(lldpctl_last_error(conn))
@@ -368,13 +368,13 @@ lldpctl_error_t lldpctl_last_error(lldpctl_conn_t *conn);
 /**
  * @defgroup lldpctl_atoms Extracting information: atoms
  *
- * Information retrieved from lldpd is represented as an atom.
+ * Information retrieved from ub-lldpd is represented as an atom.
  *
  * This is an opaque structure that can be passed along some functions to
  * transmit chassis, ports, VLAN and other information related to LLDP. Most
  * information are extracted using @c lldpctl_atom_get(), @c
  * lldpctl_atom_get_str(), @c lldpctl_atom_get_buffer() or @c
- * lldpctl_atom_get_int(), unless some IO with lldpd is needed to retrieve the
+ * lldpctl_atom_get_int(), unless some IO with ub-lldpd is needed to retrieve the
  * requested information. In this case, there exists an appropriate function to
  * convert the "deferred" atom into a normal one (like @c lldpctl_get_port()).
  *
@@ -419,13 +419,13 @@ typedef const struct {
 } lldpctl_map_t;
 
 /**
- * Return the reference to connection with lldpd.
+ * Return the reference to connection with ub-lldpd.
  *
  * @param atom The atom we want reference from.
- * @return The reference to the connection to lldpd.
+ * @return The reference to the connection to ub-lldpd.
  *
  * Each atom contains an internal reference to the corresponding connection to
- * lldpd. Use this function to get it.
+ * ub-lldpd. Use this function to get it.
  */
 lldpctl_conn_t *lldpctl_atom_get_connection(lldpctl_atom_t *atom);
 
@@ -460,7 +460,7 @@ typedef enum {
 /**
  * Callback function invoked when a change is detected.
  *
- * @param conn      Connection with lldpd. Should not be used.
+ * @param conn      Connection with ub-lldpd. Should not be used.
  * @param type      Type of change detected.
  * @param interface Physical interface on which the change has happened.
  * @param neighbor  Changed neighbor.
@@ -504,12 +504,12 @@ typedef void (*lldpctl_change_callback2)(lldpctl_change_t type,
 /**
  * Register a callback to be called on changes.
  *
- * @param conn Connection with lldpd.
+ * @param conn Connection with ub-lldpd.
  * @param cb   Replace the current callback with the provided one.
  * @param data Data that will be passed to the callback.
  * @return 0 in case of success or -1 in case of errors.
  *
- * This function will register the necessity to push neighbor changes to lldpd
+ * This function will register the necessity to push neighbor changes to ub-lldpd
  * and therefore will issue IO operations. The error code could then be @c
  * LLDPCTL_ERR_WOULDBLOCK.
  *
@@ -527,12 +527,12 @@ int lldpctl_watch_callback(lldpctl_conn_t *conn,
 /**
  * Register a callback to be called on changes.
  *
- * @param conn Connection with lldpd.
+ * @param conn Connection with ub-lldpd.
  * @param cb   Replace the current callback with the provided one.
  * @param data Data that will be passed to the callback.
  * @return 0 in case of success or -1 in case of errors.
  *
- * This function will register the necessity to push neighbor changes to lldpd
+ * This function will register the necessity to push neighbor changes to ub-lldpd
  * and therefore will issue IO operations. The error code could then be @c
  * LLDPCTL_ERR_WOULDBLOCK.
  *
@@ -547,7 +547,7 @@ int lldpctl_watch_callback2(lldpctl_conn_t *conn,
 /**
  * Wait for the next change.
  *
- * @param conn Connection with lldpd.
+ * @param conn Connection with ub-lldpd.
  * @return 0 on success or a negative integer in case of error.
  *
  * This function will return once a change has been detected. It is only useful
@@ -556,7 +556,7 @@ int lldpctl_watch_callback2(lldpctl_conn_t *conn,
 int lldpctl_watch(lldpctl_conn_t *conn);
 
 /**
- * @defgroup liblldpctl_atom_get_special Retrieving atoms from lldpd
+ * @defgroup liblldpctl_atom_get_special Retrieving atoms from ub-lldpd
  *
  * Special access functions.
  *
@@ -570,9 +570,9 @@ int lldpctl_watch(lldpctl_conn_t *conn);
  */
 
 /**
- * Retrieve global configuration of lldpd daemon.
+ * Retrieve global configuration of ub-lldpd daemon.
  *
- * @param conn Connection with lldpd.
+ * @param conn Connection with ub-lldpd.
  * @return The global configuration or @c NULL if an error happened.
  *
  * This function will make IO with the daemon to get the
@@ -586,7 +586,7 @@ lldpctl_atom_t *lldpctl_get_configuration(lldpctl_conn_t *conn);
 /**
  * Retrieve the list of available interfaces.
  *
- * @param conn Previously allocated handler to a connection to lldpd.
+ * @param conn Previously allocated handler to a connection to ub-lldpd.
  * @return The list of available ports or @c NULL if an error happened.
  *
  * This function will make IO with the daemon to get the list of
@@ -602,7 +602,7 @@ lldpctl_atom_t *lldpctl_get_interfaces(lldpctl_conn_t *conn);
 /**
  * Retrieve the information related to the local chassis.
  *
- * @param conn Previously allocated handler to a connection to lldpd.
+ * @param conn Previously allocated handler to a connection to ub-lldpd.
  * @return Atom related to the local chassis which may be used in subsequent functions.
  *
  * This function may have to do IO to get the information related to the local
@@ -633,7 +633,7 @@ lldpctl_atom_t *lldpctl_get_port(lldpctl_atom_t *port);
  *
  * This port contains default settings whenever a new port needs to be created.
  *
- * @param conn Previously allocated handler to a connection to lldpd.
+ * @param conn Previously allocated handler to a connection to ub-lldpd.
  * @return Atom of the default port which may be used in subsequent functions.
  *
  * This function may have to do IO to get the information related to the given
@@ -707,10 +707,7 @@ typedef enum {
 	lldpctl_k_config_platform,	/**< `(S,WON)` Platform description overridden (CDP) */
 	lldpctl_k_config_hostname,	/**< `(S,WON)` System name overridden */
 	lldpctl_k_config_advertise_version, /**< `(I)` Advertise version */
-	lldpctl_k_config_lldpmed_noinventory, /**< `(I)` Disable LLDP-MED inventory */
 	lldpctl_k_config_paused,	      /**< `(I,WO)` lldpd is paused */
-	lldpctl_k_config_fast_start_enabled, /**< `(I,WO)` Is fast start enabled */
-	lldpctl_k_config_fast_start_interval, /**< `(I,WO)` Start fast transmit interval */
 	lldpctl_k_config_ifdescr_update, /**< `(I,WO)` Enable or disable setting interface description */
 	lldpctl_k_config_iface_promisc,  /**< `(I,WO)` Enable or disable promiscuous mode on interfaces */
 	lldpctl_k_config_chassis_cap_advertise, /**< `(I,WO)` Enable or disable chassis capabilities advertisement */
@@ -738,48 +735,6 @@ typedef enum {
 	lldpctl_k_port_status,	   /**< `(IS,WO)` Operational status of this (local) port */
 	lldpctl_k_port_chassis,	   /**< `(A)` Chassis associated to the port */
 	lldpctl_k_port_ttl,        /**< `(I)` TTL for port, 0 if info is attached to chassis */
-	lldpctl_k_port_vlan_tx,    /**< `(I,W)` VLAN tag for TX on port, -1 VLAN disabled */
-
-	lldpctl_k_port_dot3_mfs = 1300,	   /**< `(I)` MFS */
-	lldpctl_k_port_dot3_aggregid,   /**< `(I)` Port aggregation ID */
-	lldpctl_k_port_dot3_autoneg_support, /**< `(I)` Autonegotiation support. */
-	lldpctl_k_port_dot3_autoneg_enabled, /**< `(I)` Autonegotiation enabled. */
-	lldpctl_k_port_dot3_autoneg_advertised, /**< `(I)` Advertised protocols. See `LLDP_DOT3_LINK_AUTONEG_*` */
-	lldpctl_k_port_dot3_mautype, /**< `(IS)` Current MAU type. See `LLDP_DOT3_MAU_*` */
-
-	lldpctl_k_port_dot3_power = 1400, /**< `(A,WO)` Dot3 power related stuff. */
-	lldpctl_k_dot3_power_devicetype, /**< `(IS,W)` Device type. See `LLDP_DOT3_POWER_PSE/PD` */
-	lldpctl_k_dot3_power_supported, /**< `(I,W)` Is MDI power supported. */
-	lldpctl_k_dot3_power_enabled, /**< `(I,W)` Is MDI power enabled. */
-	lldpctl_k_dot3_power_paircontrol, /**< `(I,W)` Pair-control enabled? */
-	lldpctl_k_dot3_power_pairs, /**< `(IS,W)` See `LLDP_DOT3_POWERPAIRS_*` */
-	lldpctl_k_dot3_power_class, /**< `(IS,W)` Power class. */
-	lldpctl_k_dot3_power_type, /**< `(I,W)` 802.3AT power type */
-	lldpctl_k_dot3_power_source, /**< `(IS,W)` 802.3AT power source */
-	lldpctl_k_dot3_power_priority, /**< `(IS,W)` 802.3AT power priority */
-	lldpctl_k_dot3_power_allocated, /**< `(I,W)` 802.3AT power allocated */
-	lldpctl_k_dot3_power_requested, /**< `(I,W)` 802.3AT power requested */
-
-	/* 802.3bt additions */
-	lldpctl_k_dot3_power_pd_4pid, /**< `(IS,W)` 802.3BT both modes supported? */
-	lldpctl_k_dot3_power_requested_a, /**< `(I,W)` 802.3BT power value requested for A */
-	lldpctl_k_dot3_power_requested_b, /**< `(I,W)` 802.3BT power value requested for B */
-	lldpctl_k_dot3_power_allocated_a, /**< `(I,W)` 802.3BT power value allocated for A */
-	lldpctl_k_dot3_power_allocated_b, /**< `(I,W)` 802.3BT power value allocated for B */
-	lldpctl_k_dot3_power_pse_status, /**< `(IS,W)` 802.3BT PSE powering status */
-	lldpctl_k_dot3_power_pd_status, /**< `(IS,W)` 802.3BT PD powering status */
-	lldpctl_k_dot3_power_pse_pairs_ext, /**< `(IS,W)` 802.3BT PSE power pairs */
-	lldpctl_k_dot3_power_class_a, /**< `(IS,W)` 802.3BT power class for A */
-	lldpctl_k_dot3_power_class_b, /**< `(IS,W)` 802.3BT power class for B */
-	lldpctl_k_dot3_power_class_ext, /**< `(IS,W)` 802.3BT power class */
-	lldpctl_k_dot3_power_type_ext, /**< `(IS,W)` 802.3BT power type */
-	lldpctl_k_dot3_power_pd_load, /**< `(IS,W)` 802.3BT dualsig isolated? */
-	lldpctl_k_dot3_power_pse_max, /**< `(I,W)` 802.3BT maximum available power */
-
-	lldpctl_k_port_vlan_pvid = 1500, /**< `(I)` Primary VLAN ID */
-	lldpctl_k_port_vlans, /**< `(AL)` List of VLAN */
-	lldpctl_k_vlan_id, /**< `(I)` VLAN ID */
-	lldpctl_k_vlan_name, /**< `(S)` VLAN name */
 
 	lldpctl_k_port_ppvids = 1600, /**< `(AL)` List of PPVIDs */
 	lldpctl_k_ppvid_status, /**< `(I)` Status of PPVID (see `LLDP_PPVID_CAP_*`) */
@@ -798,50 +753,6 @@ typedef enum {
 	lldpctl_k_chassis_mgmt,		 /**< `(AL)` List of management addresses */
 	lldpctl_k_chassis_ttl,		 /**< Deprecated */
 
-	lldpctl_k_chassis_med_type = 1900, /**< `(IS)` Chassis MED type. See `LLDP_MED_CLASS_*` */
-	lldpctl_k_chassis_med_cap,  /**< `(I)` Available MED capabilitied. See `LLDP_MED_CAP_*` */
-	lldpctl_k_chassis_med_inventory_hw, /**< `(S)` LLDP MED inventory "Hardware Revision" */
-	lldpctl_k_chassis_med_inventory_sw, /**< `(S)` LLDP MED inventory "Software Revision" */
-	lldpctl_k_chassis_med_inventory_fw, /**< `(S)` LLDP MED inventory "Firmware Revision" */
-	lldpctl_k_chassis_med_inventory_sn, /**< `(S)` LLDP MED inventory "Serial Number" */
-	lldpctl_k_chassis_med_inventory_manuf, /**< `(S)` LLDP MED inventory "Manufacturer" */
-	lldpctl_k_chassis_med_inventory_model, /**< `(S)` LLDP MED inventory "Model" */
-	lldpctl_k_chassis_med_inventory_asset, /**< `(S)` LLDP MED inventory "Asset ID" */
-
-	lldpctl_k_port_med_policies = 2000, /**< `(AL,WO)` MED policies attached to a port. */
-	lldpctl_k_med_policy_type, /**< `(IS,W)` MED policy app type. See `LLDP_MED_APPTYPE_*`. 0 if a policy is not defined. */
-	lldpctl_k_med_policy_unknown, /**< `(I,W)` Is MED policy defined? */
-	lldpctl_k_med_policy_tagged, /**< `(I,W)` MED policy tagging */
-	lldpctl_k_med_policy_vid,    /**< `(I,W)` MED policy VID */
-	lldpctl_k_med_policy_priority, /**< `(I,W)` MED policy priority */
-	lldpctl_k_med_policy_dscp,     /**< `(I,W)` MED policy DSCP */
-
-	lldpctl_k_port_med_locations = 2100, /**< `(AL,WO)` MED locations attached to a port. */
-	lldpctl_k_med_location_format, /**< `(IS,W)` MED location format. See
-					* `LLDP_MED_LOCFORMAT_*`. 0 if this
-					* location is not defined. When written,
-					* the following fields will be zeroed
-					* out. */
-	lldpctl_k_med_location_geoid, /**< `(IS,W)` MED geoid. See `LLDP_MED_LOCATION_GEOID_*`. Only if format is COORD. */
-	lldpctl_k_med_location_latitude,  /**< `(S,W)` MED latitude. Only if format is COORD. */
-	lldpctl_k_med_location_longitude, /**< `(S,W)` MED longitude. Only if format is COORD. */
-	lldpctl_k_med_location_altitude,  /**< `(S,W)` MED altitude. Only if format is COORD. */
-	lldpctl_k_med_location_altitude_unit, /**< `(S,W)` MED altitude unit. See `LLDP_MED_LOCATION_ALTITUDE_UNIT_*`.
-					       * Only if format is COORD. */
-
-	lldpctl_k_med_location_country = 2200, /**< `(S,W)` MED country. Only if format is CIVIC. */
-	lldpctl_k_med_location_elin, /**< `(S,W)` MED ELIN. Only if format is ELIN. */
-
-	lldpctl_k_med_location_ca_elements = 2300, /**< `(AL,WC)` MED civic address elements. Only if format is CIVIC */
-	lldpctl_k_med_civicaddress_type, /**< `(IS,W)` MED civic address type. */
-	lldpctl_k_med_civicaddress_value, /**< `(S,W)` MED civic address value. */
-
-	lldpctl_k_port_med_power = 2400, /**< `(A,WO)` LLDP-MED power related stuff. */
-	lldpctl_k_med_power_type, /**< `(IS,W)` LLDP MED power device type. See `LLDP_MED_POW_TYPE_*` */
-	lldpctl_k_med_power_source, /**< `(IS,W)` LLDP MED power source. See `LLDP_MED_POW_SOURCE_*` */
-	lldpctl_k_med_power_priority, /**< `(IS,W)` LLDP MED power priority. See `LLDP_MED_POW_PRIO_*` */
-	lldpctl_k_med_power_val, /**< `(I,W)` LLDP MED power value */
-
 	lldpctl_k_mgmt_ip = 3000,	/**< `(S)` IP address */
 	lldpctl_k_mgmt_iface_index = 30001,	/**< `(I)` Interface index */
 
@@ -853,19 +764,8 @@ typedef enum {
 	lldpctl_k_insert_cnt,	/**< `(I)` insert cnt. Only works for a local port. */
 	lldpctl_k_delete_cnt,	/**< `(I)` delete cnt. Only works for a local port. */
 	lldpctl_k_config_tx_hold, /**< `(I,WO)` Transmit hold interval. */
-	lldpctl_k_config_bond_slave_src_mac_type, /**< `(I,WO)` bond slave src mac type. */
 	lldpctl_k_config_lldp_portid_type, /**< `(I,WO)` LLDP PortID TLV Subtype */
-	lldpctl_k_config_lldp_agent_type, /**< `(I,WO)` LLDP agent type */
 	lldpctl_k_config_max_neighbors, /**< `(I,WO)`Maximum number of neighbors per port. */
-
-	lldpctl_k_custom_tlvs = 5000,		/**< `(AL)` custom TLVs */
-	lldpctl_k_custom_tlvs_clear,		/** `(I,WO)` clear list of custom TLVs */
-	lldpctl_k_custom_tlv,			/** `(AL,WO)` custom TLV **/
-	lldpctl_k_custom_tlv_oui,		/**< `(I,WO)` custom TLV Organizationally Unique Identifier. Default is 0 (3 bytes) */
-	lldpctl_k_custom_tlv_oui_subtype,	/**< `(I,WO)` custom TLV subtype. Default is 0 (1 byte) */
-	lldpctl_k_custom_tlv_oui_info_string,	/**< `(I,WO)` custom TLV Organizationally Unique Identifier Information String (up to 507 bytes) */
-	lldpctl_k_custom_tlv_op,		/**< `(I,WO)` custom TLV operation */
-
 } lldpctl_key_t;
 
 /**
@@ -1014,7 +914,7 @@ lldpctl_atom_t *lldpctl_atom_set_buffer(lldpctl_atom_t *atom, lldpctl_key_t key,
  * in this form.
  *
  * Only @c lldpctl_last_error() can tell if the returned value is an error or
- * not. However, most values extracted from lldpd cannot be negative.
+ * not. However, most values extracted from ub-lldpd cannot be negative.
  */
 long int lldpctl_atom_get_int(lldpctl_atom_t *atom, lldpctl_key_t key);
 

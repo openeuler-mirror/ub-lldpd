@@ -43,34 +43,6 @@ version_display(FILE *destination, const char *progname, int verbose)
 		return;
 	}
 
-	const char *const lldp_features[] = {
-#ifdef ENABLE_LLDPMED
-		"LLDP-MED",
-#endif
-#ifdef ENABLE_DOT1
-		"Dot1",
-#endif
-#ifdef ENABLE_DOT3
-		"Dot3",
-#endif
-#ifdef ENABLE_CUSTOM
-		"Custom TLV",
-#endif
-		NULL};
-	const char *const protocols[] = {
-#ifdef ENABLE_CDP
-		"CDP",
-#endif
-#ifdef ENABLE_FDP
-		"FDP",
-#endif
-#ifdef ENABLE_EDP
-		"EDP",
-#endif
-#ifdef ENABLE_SONMP
-		"SONMP",
-#endif
-		NULL};
 	const char *const output_formats[] = {
 		"TEXT",
 		"KV",
@@ -86,27 +58,9 @@ version_display(FILE *destination, const char *progname, int verbose)
 	fprintf(destination, "\n");
 
 	/* Features */
-	if (!strcmp(progname, "lldpd")) {
-		version_display_array(destination,
-		    "Additional LLDP features:    ", lldp_features);
-		version_display_array(destination,
-		    "Additional protocols:        ", protocols);
-		fprintf(destination,
-		    "SNMP support:                "
-#ifdef USE_SNMP
-		    "yes\n"
-#else
-		    "no\n"
-#endif
-			);
+	if (!strcmp(progname, "ub-lldpd")) {
 #ifdef HOST_OS_LINUX
 		fprintf(destination,
-		    "Old kernel support:          "
-#ifdef ENABLE_OLDIES
-		    "yes"
-#else
-		    "no"
-#endif
 		    " (Linux " MIN_LINUX_KERNEL_VERSION "+)\n");
 #endif
 #ifdef ENABLE_PRIVSEP
@@ -126,7 +80,7 @@ version_display(FILE *destination, const char *progname, int verbose)
 		    "Configuration directory:     " SYSCONFDIR "\n");
 	}
 
-	if (!strcmp(progname, "lldpcli")) {
+	if (!strcmp(progname, "ub-lldpcli")) {
 		version_display_array(destination,
 		    "Additional output formats:   ", output_formats);
 	}

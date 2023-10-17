@@ -37,7 +37,7 @@
 #ifdef HAVE___PROGNAME
 extern const char	*__progname;
 #else
-# define __progname "lldpcli"
+# define __progname "ub-lldpcli"
 #endif
 
 /* Global for completion */
@@ -52,7 +52,7 @@ is_lldpctl(const char *name)
 		char *basec = strdup(name);
 		if (!basec) return 0;
 		char *bname = basename(basec);
-		last_result = (!strcmp(bname, "lldpctl"));
+		last_result = (!strcmp(bname, "ub-lldpctl"));
 		free(basec);
 	}
 	return (last_result == -1)?0:last_result;
@@ -67,7 +67,7 @@ usage()
 	fprintf(stderr, "\n");
 
 	fprintf(stderr, "-d          Enable more debugging information.\n");
-	fprintf(stderr, "-u socket   Specify the Unix-domain socket used for communication with lldpd(8).\n");
+	fprintf(stderr, "-u socket   Specify the Unix-domain socket used for communication with ub-lldpd(8).\n");
 	fprintf(stderr, "-f format   Choose output format (plain, keyvalue, json, json0"
 #if defined USE_XML
 	    ", xml"
@@ -78,7 +78,7 @@ usage()
 
 	fprintf(stderr, "\n");
 
-	fprintf(stderr, "see manual page lldpcli(8) for more information\n");
+	fprintf(stderr, "see manual page ub-lldpcli(8) for more information\n");
 	exit(1);
 }
 
@@ -98,8 +98,8 @@ prompt()
 	int privileged = is_privileged();
 	if (isatty(STDIN_FILENO)) {
 		if (privileged)
-			return "[lldpcli] # ";
-		return "[lldpcli] $ ";
+			return "[ub-lldpcli] # ";
+		return "[ub-lldpcli] $ ";
 	}
 	return "";
 }
@@ -112,7 +112,7 @@ static int
 cmd_exit(struct lldpctl_conn_t *conn, struct writer *w,
     struct cmd_env *env, void *arg)
 {
-	log_info("lldpctl", "quit lldpcli");
+	log_info("ub-lldpctl", "quit ub-lldpcli");
 	must_exit = 1;
 	return 1;
 }
@@ -124,31 +124,31 @@ static int
 cmd_update(struct lldpctl_conn_t *conn, struct writer *w,
     struct cmd_env *env, void *arg)
 {
-	log_info("lldpctl", "ask for global update");
+	log_info("ub-lldpctl", "ask for global update");
 
 	lldpctl_atom_t *config = lldpctl_get_configuration(conn);
 	if (config == NULL) {
-		log_warnx("lldpctl", "unable to get configuration from lldpd. %s",
+		log_warnx("ub-lldpctl", "unable to get configuration from ub-lldpd. %s",
 		    lldpctl_last_strerror(conn));
 		return 0;
 	}
 	if (lldpctl_atom_set_int(config,
 		lldpctl_k_config_tx_interval, -1) == NULL) {
-		log_warnx("lldpctl", "unable to ask lldpd for immediate retransmission. %s",
+		log_warnx("ub-lldpctl", "unable to ask ub-lldpd for immediate retransmission. %s",
 		    lldpctl_last_strerror(conn));
 		lldpctl_atom_dec_ref(config);
 		return 0;
 	}
-	log_info("lldpctl", "immediate retransmission requested successfully");
+	log_info("ub-lldpctl", "immediate retransmission requested successfully");
 	lldpctl_atom_dec_ref(config);
 	return 1;
 }
 
 /**
- * Pause or resume execution of lldpd.
+ * Pause or resume execution of ub-lldpd.
  *
- * @param conn    The connection to lldpd.
- * @param pause   1 if we want to pause lldpd, 0 otherwise
+ * @param conn    The connection to ub-lldpd.
+ * @param pause   1 if we want to pause ub-lldpd, 0 otherwise
  * @return 1 on success, 0 on error
  */
 static int
@@ -156,25 +156,25 @@ cmd_pause_resume(lldpctl_conn_t *conn, int pause)
 {
 	lldpctl_atom_t *config = lldpctl_get_configuration(conn);
 	if (config == NULL) {
-		log_warnx("lldpctl", "unable to get configuration from lldpd. %s",
+		log_warnx("ub-lldpctl", "unable to get configuration from ub-lldpd. %s",
 		    lldpctl_last_strerror(conn));
 		return 0;
 	}
 	if (lldpctl_atom_get_int(config, lldpctl_k_config_paused) == pause) {
-		log_debug("lldpctl", "lldpd is already %s",
+		log_debug("ub-lldpctl", "ub-lldpd is already %s",
 		    pause?"paused":"resumed");
 		lldpctl_atom_dec_ref(config);
 		return 1;
 	}
 	if (lldpctl_atom_set_int(config,
 		lldpctl_k_config_paused, pause) == NULL) {
-		log_warnx("lldpctl", "unable to ask lldpd to %s operations. %s",
+		log_warnx("ub-lldpctl", "unable to ask ub-lldpd to %s operations. %s",
 		    pause?"pause":"resume",
 		    lldpctl_last_strerror(conn));
 		lldpctl_atom_dec_ref(config);
 		return 0;
 	}
-	log_info("lldpctl", "lldpd should %s operations",
+	log_info("ub-lldpctl", "ub-lldpd should %s operations",
 	    pause?"pause":"resume");
 	lldpctl_atom_dec_ref(config);
 	return 1;
@@ -258,7 +258,7 @@ readline(const char *p)
 /**
  * Execute a tokenized command and display its output.
  *
- * @param conn The connection to lldpd.
+ * @param conn The connection to ub-lldpd.
  * @param fmt  Output format.
  * @param argc Number of arguments.
  * @param argv Array of arguments.
@@ -278,7 +278,7 @@ cmd_exec(lldpctl_conn_t *conn, const char *fmt, int argc, const char **argv)
 	else if (strcmp(fmt, "xml")      == 0) w = xml_init(stdout);
 #endif
 	else {
-		log_warnx("lldpctl", "unknown output format \"%s\"", fmt);
+		log_warnx("ub-lldpctl", "unknown output format \"%s\"", fmt);
 		w = txt_init(stdout);
 	}
 
@@ -286,7 +286,7 @@ cmd_exec(lldpctl_conn_t *conn, const char *fmt, int argc, const char **argv)
 	int rc = commands_execute(conn, w,
 	    root, argc, argv, is_privileged());
 	if (rc != 0) {
-		log_info("lldpctl", "an error occurred while executing last command");
+		log_info("ub-lldpctl", "an error occurred while executing last command");
 		w->finish(w);
 		return 0;
 	}
@@ -307,14 +307,14 @@ parse_and_exec(lldpctl_conn_t *conn, const char *fmt, const char *line)
 {
 	int cargc = 0; char **cargv = NULL;
 	int n;
-	log_debug("lldpctl", "tokenize command line");
+	log_debug("ub-lldpctl", "tokenize command line");
 	n = tokenize_line(line, &cargc, &cargv);
 	switch (n) {
 	case -1:
-		log_warnx("lldpctl", "internal error while tokenizing");
+		log_warnx("ub-lldpctl", "internal error while tokenizing");
 		return -1;
 	case 1:
-		log_warnx("lldpctl", "unmatched quotes");
+		log_warnx("ub-lldpctl", "unmatched quotes");
 		return -1;
 	}
 	if (cargc != 0)
@@ -342,11 +342,11 @@ register_commands()
 	commands_new(root, "help", "Get help on a possible command",
 	    NULL, cmd_store_env_and_pop, "help");
 	commands_new(
-		commands_new(root, "pause", "Pause lldpd operations", NULL, NULL, NULL),
-		NEWLINE, "Pause lldpd operations", NULL, cmd_pause, NULL);
+		commands_new(root, "pause", "Pause ub-lldpd operations", NULL, NULL, NULL),
+		NEWLINE, "Pause ub-lldpd operations", NULL, cmd_pause, NULL);
 	commands_new(
-		commands_new(root, "resume", "Resume lldpd operations", NULL, NULL, NULL),
-		NEWLINE, "Resume lldpd operations", NULL, cmd_resume, NULL);
+		commands_new(root, "resume", "Resume ub-lldpd operations", NULL, NULL, NULL),
+		NEWLINE, "Resume ub-lldpd operations", NULL, cmd_resume, NULL);
 	commands_new(
 		commands_new(root, "exit", "Exit interpreter", NULL, NULL, NULL),
 		NEWLINE, "Exit interpreter", NULL, cmd_exit, NULL);
@@ -379,10 +379,10 @@ input_append(const char *arg, struct inputs *inputs, int acceptdir, int warn)
 	struct stat statbuf;
 	if (stat(arg, &statbuf) == -1) {
 		if (warn) {
-			log_warn("lldpctl", "cannot find configuration file/directory %s",
+			log_warn("ub-lldpctl", "cannot find configuration file/directory %s",
 			    arg);
 		} else {
-			log_debug("lldpctl", "cannot find configuration file/directory %s",
+			log_debug("ub-lldpctl", "cannot find configuration file/directory %s",
 			    arg);
 		}
 		return;
@@ -391,17 +391,17 @@ input_append(const char *arg, struct inputs *inputs, int acceptdir, int warn)
 	if (!S_ISDIR(statbuf.st_mode)) {
 		struct input *input = malloc(sizeof(struct input));
 		if (!input) {
-			log_warn("lldpctl", "not enough memory to process %s",
+			log_warn("ub-lldpctl", "not enough memory to process %s",
 			    arg);
 			return;
 		}
-		log_debug("lldpctl", "input: %s", arg);
+		log_debug("ub-lldpctl", "input: %s", arg);
 		input->name = strdup(arg);
 		TAILQ_INSERT_TAIL(inputs, input, next);
 		return;
 	}
 	if (!acceptdir) {
-		log_debug("lldpctl", "skip directory %s",
+		log_debug("ub-lldpctl", "skip directory %s",
 		    arg);
 		return;
 	}
@@ -409,7 +409,7 @@ input_append(const char *arg, struct inputs *inputs, int acceptdir, int warn)
 	struct dirent **namelist = NULL;
 	int n =	scandir(arg, &namelist, filter, alphasort);
 	if (n < 0) {
-		log_warnx("lldpctl", "unable to read directory %s",
+		log_warnx("ub-lldpctl", "unable to read directory %s",
 		    arg);
 		return;
 	}
@@ -483,7 +483,7 @@ main(int argc, char *argv[])
 	}
 
 	if (version) {
-		version_display(stdout, "lldpcli", version > 1);
+		version_display(stdout, "ub-lldpcli", version > 1);
 		exit(0);
 	}
 
@@ -499,7 +499,7 @@ main(int argc, char *argv[])
 	root = register_commands();
 
 	/* Make a connection */
-	log_debug("lldpctl", "connect to lldpd");
+	log_debug("ub-lldpctl", "connect to ub-lldpd");
 	conn = lldpctl_new_name(ctlname, NULL, NULL, NULL);
 	if (conn == NULL) goto end;
 
@@ -508,7 +508,7 @@ main(int argc, char *argv[])
 		/* coverity[use_after_free]
 		   TAILQ_REMOVE does the right thing */
 		struct input *first = TAILQ_FIRST(&inputs);
-		log_debug("lldpctl", "process: %s", first->name);
+		log_debug("ub-lldpctl", "process: %s", first->name);
 		FILE *file = fopen(first->name, "r");
 		if (file) {
 			size_t n;
@@ -524,7 +524,7 @@ main(int argc, char *argv[])
 			free(line);
 			fclose(file);
 		} else {
-			log_warn("lldpctl", "unable to open %s",
+			log_warn("ub-lldpctl", "unable to open %s",
 			    first->name);
 		}
 		TAILQ_REMOVE(&inputs, first, next);
@@ -540,24 +540,24 @@ main(int argc, char *argv[])
 			if (asprintf(&line, "%s%s%s",
 				prev?prev:"show neigh ports ", argv[i],
 				(i == argc - 1)?" details":",") == -1) {
-				log_warnx("lldpctl", "not enough memory to build list of interfaces");
+				log_warnx("ub-lldpctl", "not enough memory to build list of interfaces");
 				free(prev);
 				goto end;
 			}
 			free(prev);
 		}
 		if (line == NULL && (line = strdup("show neigh details")) == NULL) {
-			log_warnx("lldpctl", "not enough memory to build command line");
+			log_warnx("ub-lldpctl", "not enough memory to build command line");
 			goto end;
 		}
-		log_debug("lldpctl", "execute %s", line);
+		log_debug("ub-lldpctl", "execute %s", line);
 		if (parse_and_exec(conn, fmt, line) != -1)
 			rc = EXIT_SUCCESS;
 		free(line);
 		goto end;
 	}
 
-	/* Then, if we are regular lldpcli (command line) */
+	/* Then, if we are regular ub-lldpcli (command line) */
 	if (optind < argc) {
 		const char **cargv;
 		int cargc;

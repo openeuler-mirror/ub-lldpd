@@ -75,10 +75,7 @@ struct	ether_header {
 	u_int16_t ether_type;
 };
 
-#define ETHERTYPE_VLAN          0x8100  /* IEEE 802.1Q VLAN tagging (XXX conflicts) */
 #define ETHERTYPE_LLDP          0x88CC  /* Link Layer Discovery Protocol */
-
-#define	ETHER_IS_MULTICAST(addr) (*(addr) & 0x01) /* is address mcast/bcast? */
 
 #define	ETHERMTU	(ETHER_MAX_LEN - ETHER_HDR_LEN - ETHER_CRC_LEN)
 #define	ETHERMIN	(ETHER_MIN_LEN - ETHER_HDR_LEN - ETHER_CRC_LEN)

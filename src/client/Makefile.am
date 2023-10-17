@@ -2,48 +2,48 @@ AM_CFLAGS = -I $(top_srcdir)/include $(LLDP_CFLAGS)
 AM_CPPFLAGS = $(LLDP_CPPFLAGS)
 AM_LDFLAGS = $(LLDP_LDFLAGS)
 
-sbin_PROGRAMS = lldpcli
-man_MANS = lldpcli.8
-dist_man_MANS = lldpctl.8
+sbin_PROGRAMS = ub-lldpcli
+man_MANS = ub-lldpcli.8
+dist_man_MANS = ub-lldpctl.8
 
-install-exec-local: lldpcli
-	cd $(DESTDIR)$(sbindir) && rm -f lldpctl
-	cd $(DESTDIR)$(sbindir) && $(LN_S) lldpcli lldpctl
+install-exec-local: ub-lldpcli
+	cd $(DESTDIR)$(sbindir) && rm -f ub-lldpctl
+	cd $(DESTDIR)$(sbindir) && $(LN_S) ub-lldpcli ub-lldpctl
 uninstall-local:
-	cd $(DESTDIR)$(sbindir) && rm -f lldpctl
+	cd $(DESTDIR)$(sbindir) && rm -f ub-lldpctl
 
-lldpcli_SOURCES  = client.h lldpcli.c display.c \
-	conf.c conf-med.c conf-dot3.c conf-power.c \
+ub_lldpcli_SOURCES  = client.h lldpcli.c display.c \
+	conf.c \
 	conf-lldp.c conf-system.c \
 	commands.c show.c \
 	misc.c tokenizer.c \
 	utf8.c \
 	writer.h text_writer.c kv_writer.c json_writer.c
-lldpcli_LDADD    = \
+ub_lldpcli_LDADD    = \
 	$(top_builddir)/src/libcommon-daemon-client.la \
-	$(top_builddir)/src/lib/liblldpctl.la \
+	$(top_builddir)/src/lib/libublldpctl.la \
 	@READLINE_LIBS@
-lldpcli_CFLAGS   = $(AM_CFLAGS)
-lldpcli_LDFLAGS  = $(AM_LDFLAGS) $(LLDP_BIN_LDFLAGS)
+ub_lldpcli_CFLAGS   = $(AM_CFLAGS)
+ub_lldpcli_LDFLAGS  = $(AM_LDFLAGS) $(LLDP_BIN_LDFLAGS)
 
 if USE_XML
-lldpcli_SOURCES += xml_writer.c
-lldpcli_CFLAGS  += @libxml2_CFLAGS@
-lldpcli_LDADD   += @libxml2_LIBS@
+ub_lldpcli_SOURCES += xml_writer.c
+ub_lldpcli_CFLAGS  += @libxml2_CFLAGS@
+ub_lldpcli_LDADD   += @libxml2_LIBS@
 endif
 
 # Completions
 bashcompletiondir = $(datadir)/bash-completion/completions
-dist_bashcompletion_DATA = completion/lldpcli
+dist_bashcompletion_DATA = completion/ub-lldpcli
 zshcompletiondir = $(datadir)/zsh/site-functions
-dist_zshcompletion_DATA = completion/_lldpcli
+dist_zshcompletion_DATA = completion/_ub_lldpcli
 
 # Default configuration
-lldpdconfdir = $(sysconfdir)/lldpd.d
+lldpdconfdir = $(sysconfdir)/ub-lldpd.d
 dist_lldpdconf_DATA = README.conf
 
-TEMPLATES  = lldpcli.8
-EXTRA_DIST = lldpcli.8.in
+TEMPLATES  = ub-lldpcli.8
+EXTRA_DIST = ub-lldpcli.8.in
 CLEANFILES = $(TEMPLATES)
-lldpcli.8: lldpcli.8.in
+ub-lldpcli.8: ub-lldpcli.8.in
 include $(top_srcdir)/edit.am

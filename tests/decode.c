@@ -23,7 +23,7 @@
 #include <fcntl.h>
 #include <arpa/inet.h>
 #include "pcap-hdr.h"
-#include "../src/daemon/lldpd.h"
+#include "../src/daemon/ub-lldpd.h"
 
 #define BUFSIZE 2000
 
@@ -103,30 +103,7 @@ main(int argc, char **argv)
 		fprintf(stderr, "Decoded as a LLDP frame\n");
 		decoded = 1;
 	}
-#if defined ENABLE_CDP || defined ENABLE_FDP
-	if (cdp_decode(NULL, frame, rechdr.incl_len, &hardware, &nchassis, &nport) == -1) {
-		fprintf(stderr, "Not decoded as a CDP frame\n");
-	} else {
-		fprintf(stderr, "Decoded as a CDP frame\n");
-		decoded = 1;
-	}
-#endif
-#ifdef ENABLE_SONMP
-	if (sonmp_decode(NULL, frame, rechdr.incl_len, &hardware, &nchassis, &nport) == -1) {
-		fprintf(stderr, "Not decoded as a SONMP frame\n");
-	} else {
-		fprintf(stderr, "Decoded as a SONMP frame\n");
-		decoded = 1;
-	}
-#endif
-#ifdef ENABLE_EDP
-	if (edp_decode(NULL, frame, rechdr.incl_len, &hardware, &nchassis, &nport) == -1) {
-		fprintf(stderr, "Not decoded as a EDP frame\n");
-	} else {
-		fprintf(stderr, "Decoded as a EDP frame\n");
-		decoded = 1;
-	}
-#endif
+
 	if (!decoded) exit(1);
 
 	printf("Chassis:\n");
@@ -159,17 +136,6 @@ main(int argc, char **argv)
 			break;
 		printf(" mgmt: %s\n", ipaddress);
 	}
-#ifdef ENABLE_LLDPMED
-	printf(" MED cap: %" PRIu16 "\n", nchassis->c_med_cap_available);
-	printf(" MED type: %" PRIu8 "\n", nchassis->c_med_type);
-	printf(" MED HW: %s\n", nchassis->c_med_hw?nchassis->c_med_hw:"(null)");
-	printf(" MED FW: %s\n", nchassis->c_med_fw?nchassis->c_med_fw:"(null)");
-	printf(" MED SW: %s\n", nchassis->c_med_sw?nchassis->c_med_sw:"(null)");
-	printf(" MED SN: %s\n", nchassis->c_med_sn?nchassis->c_med_sn:"(null)");
-	printf(" MED manufacturer: %s\n", nchassis->c_med_manuf?nchassis->c_med_manuf:"(null)");
-	printf(" MED model: %s\n", nchassis->c_med_model?nchassis->c_med_model:"(null)");
-	printf(" MED asset: %s\n", nchassis->c_med_asset?nchassis->c_med_asset:"(null)");
-#endif
 
 	printf("Port:\n");
 	printf(" ID subtype: %" PRIu8 "\n", nport->p_id_subtype);
@@ -177,71 +143,5 @@ main(int argc, char **argv)
 	printf(" Description: %s\n", nport->p_descr?nport->p_descr:"(null)");
 	printf(" MFS: %" PRIu16 "\n", nport->p_mfs);
 	printf(" TTL: %" PRIu16 "\n", nport->p_ttl);
-#ifdef ENABLE_DOT3
-	printf(" Dot3 aggrID: %" PRIu32 "\n", nport->p_aggregid);
-	printf(" Dot3 MAC/phy autoneg supported: %" PRIu8 "\n", nport->p_macphy.autoneg_support);
-	printf(" Dot3 MAC/phy autoneg enabled: %" PRIu8 "\n", nport->p_macphy.autoneg_enabled);
-	printf(" Dot3 MAC/phy autoneg advertised: %" PRIu16 "\n", nport->p_macphy.autoneg_advertised);
-	printf(" Dot3 MAC/phy MAU type: %" PRIu16 "\n", nport->p_macphy.mau_type);
-	printf(" Dot3 power device type: %" PRIu8 "\n", nport->p_power.devicetype);
-	printf(" Dot3 power supported: %" PRIu8 "\n", nport->p_power.supported);
-	printf(" Dot3 power enabled: %" PRIu8 "\n", nport->p_power.enabled);
-	printf(" Dot3 power pair control: %" PRIu8 "\n", nport->p_power.paircontrol);
-	printf(" Dot3 power pairs: %" PRIu8 "\n", nport->p_power.pairs);
-	printf(" Dot3 power class: %" PRIu8 "\n", nport->p_power.class);
-	printf(" Dot3 power type: %" PRIu8 "\n", nport->p_power.powertype);
-	printf(" Dot3 power source: %" PRIu8 "\n", nport->p_power.source);
-	printf(" Dot3 power priority: %" PRIu8 "\n", nport->p_power.priority);
-	printf(" Dot3 power requested: %" PRIu16 "\n", nport->p_power.requested);
-	printf(" Dot3 power allocated: %" PRIu16 "\n", nport->p_power.allocated);
-#endif
-#ifdef ENABLE_LLDPMED
-	printf(" MED cap: %" PRIu16 "\n", nport->p_med_cap_enabled);
-	for (int i = 0; i < LLDP_MED_APPTYPE_LAST; i++) {
-		if (nport->p_med_policy[i].type == 0) continue;
-		printf(" MED policy type: %" PRIu8 "\n", nport->p_med_policy[i].type);
-		printf(" MED policy unknown: %" PRIu8 "\n", nport->p_med_policy[i].unknown);
-		printf(" MED policy tagged: %" PRIu8 "\n", nport->p_med_policy[i].tagged);
-		printf(" MED policy vid: %" PRIu16 "\n", nport->p_med_policy[i].vid);
-		printf(" MED policy priority: %" PRIu8 "\n", nport->p_med_policy[i].priority);
-		printf(" MED policy dscp: %" PRIu8 "\n", nport->p_med_policy[i].dscp);
-	}
-	for (int i = 0; i < LLDP_MED_LOCFORMAT_LAST; i++) {
-		if (nport->p_med_location[i].format == 0) continue;
-		printf(" MED location format: %" PRIu8 "\n", nport->p_med_location[i].format);
-		printf(" MED location: %s\n", tohex(nport->p_med_location[i].data,
-			nport->p_med_location[i].data_len));
-	}
-	printf(" MED power device type: %" PRIu8 "\n", nport->p_med_power.devicetype);
-	printf(" MED power source: %" PRIu8 "\n", nport->p_med_power.source);
-	printf(" MED power priority: %" PRIu8 "\n", nport->p_med_power.priority);
-	printf(" MED power value: %" PRIu16 "\n", nport->p_med_power.val);
-#endif
-#ifdef ENABLE_DOT1
-	printf(" Dot1 PVID: %" PRIu16 "\n", nport->p_pvid);
-	struct lldpd_vlan *vlan;
-	TAILQ_FOREACH(vlan, &nport->p_vlans, v_entries) {
-		printf(" Dot1 VLAN: %s (%" PRIu16 ")\n", vlan->v_name, vlan->v_vid);
-	}
-	struct lldpd_ppvid *ppvid;
-	TAILQ_FOREACH(ppvid, &nport->p_ppvids, p_entries) {
-		printf(" Dot1 PPVID: %" PRIu16 " (status: %" PRIu8 ")\n",
-		    ppvid->p_ppvid, ppvid->p_cap_status);
-	}
-	struct lldpd_pi *pid;
-	TAILQ_FOREACH(pid, &nport->p_pids, p_entries) {
-		printf(" Dot1 PI: %s\n", tohex(pid->p_pi, pid->p_pi_len));
-	}
-#endif
-#ifdef ENABLE_CUSTOM
-	struct lldpd_custom *custom;
-	TAILQ_FOREACH(custom, &nport->p_custom_list, next) {
-		printf(" Custom OUI: %s\n",
-		    tohex((char*)custom->oui, sizeof(custom->oui)));
-		printf(" Custom subtype: %" PRIu8 "\n", custom->subtype);
-		printf(" Custom info: %s\n",
-		    tohex((char*)custom->oui_info, custom->oui_info_len));
-	}
-#endif
 	exit(0);
 }

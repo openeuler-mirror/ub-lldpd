@@ -35,7 +35,7 @@ enum hmsg_type {
 	GET_DEFAULT_PORT,	/* Get all information related to default port */
 	SET_PORT,		/* Set port-related information (location, power, policy) */
 	SUBSCRIBE,		/* Subscribe to neighbor changes */
-	NOTIFICATION,		/* Notification message (sent by lldpd!) */
+	NOTIFICATION,		/* Notification message (sent by ub-lldpd!) */
 };
 
 /** Header for the control protocol.

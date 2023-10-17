@@ -14,11 +14,11 @@
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
 .Dd $Mdocdate: July 16 2008 $
-.Dt LLDPCLI 8
+.Dt UB-LLDPCLI 8
 .Os
 .Sh NAME
-.Nm lldpcli ,
-.Nm lldpctl
+.Nm ub-lldpcli ,
+.Nm ub-lldpctl
 .Nd control LLDP daemon
 .Sh SYNOPSIS
 .Nm
@@ -27,7 +27,7 @@
 .Op Fl f Ar format
 .Op Fl c Ar file
 .Op Ar command ...
-.Nm lldpctl
+.Nm ub-lldpctl
 .Op Fl dv
 .Op Fl u Ar socket
 .Op Fl f Ar format
@@ -36,7 +36,7 @@
 The
 .Nm
 program controls
-.Xr lldpd 8
+.Xr ub-lldpd 8
 daemon.
 .Pp
 When no command is specified,
@@ -51,7 +51,7 @@ The options are as follows:
 Enable more debugging information. This flag can be repeated.
 .It Fl u Ar socket
 Specify the Unix-domain socket used for communication with
-.Xr lldpd 8 .
+.Xr ub-lldpd 8 .
 .It Fl v
 Show
 .Nm
@@ -81,7 +81,7 @@ Order is alphabetical.
 .El
 .Pp
 When invoked as
-.Nm lldpctl ,
+.Nm ub-lldpctl ,
 .Nm
 will display detailed information about each neighbors on the
 specified interfaces or on all interfaces if none are specified. This
@@ -120,7 +120,7 @@ command is always available.
 .Op Cd hidden
 .Bd -ragged -offset XXXXXX
 Display information about each neighbor known by
-.Xr lldpd 8
+.Xr ub-lldpd 8
 daemon. With
 .Cd summary ,
 only the name and the port description of each remote host will be
@@ -140,7 +140,7 @@ given list of ports.
 .Op Cd hidden
 .Bd -ragged -offset XXXXXX
 Display information about each local interface known by
-.Xr lldpd 8
+.Xr ub-lldpd 8
 daemon. With
 .Cd summary ,
 only the name and the port description of each local interface will be
@@ -187,7 +187,7 @@ will exit after receiving the specified number of events.
 .Cd show configuration
 .Bd -ragged -offset XXXXXX
 Display global configuration of
-.Xr lldpd 8
+.Xr ub-lldpd 8
 daemon.
 .Ed
 
@@ -205,7 +205,7 @@ the statistics of each port is summed.
 .Cd update
 .Bd -ragged -offset XXXXXX
 Make
-.Xr lldpd 8
+.Xr ub-lldpd 8
 update its information and send new LLDP PDU on all interfaces.
 .Ed
 
@@ -272,7 +272,7 @@ option undoes the previous one.
 .Bd -ragged -offset XXXXXX
 Specify which interface to listen and send LLDPDU to. Without this
 option,
-.Nm lldpd
+.Nm ub-lldpd
 will use all available physical interfaces. This option can use
 wildcards. Several interfaces can be specified separated by commas.
 It is also possible to remove an interface by prefixing it with an
@@ -281,7 +281,7 @@ prefixing it with two exclamation marks. An allowed interface beats
 a forbidden interfaces which beats a simple matched interface. For
 example, with
 .Em eth*,!eth1,!eth2
-.Nm lldpd
+.Nm ub-lldpd
 will only use interfaces starting by
 .Em eth
 with the exception of
@@ -311,9 +311,9 @@ physical interfaces. This option undoes the previous one.
 .Cd system interface permanent Ar pattern
 .Bd -ragged -offset XXXXXX
 Specify interfaces whose configuration is permanently kept by
-.Nm lldpd .
+.Nm ub-lldpd .
 By default,
-.Nm lldpd
+.Nm ub-lldpd
 disregard any data about interfaces when they are removed from the
 system (statistics, custom configuration). This option allows one to
 specify a pattern similar to the interface pattern. If an interface
@@ -337,7 +337,7 @@ undoes the previous one.
 .Bd -ragged -offset XXXXXX
 Some OS allows the user to set a description for an interface. Setting
 this option will enable
-.Nm lldpd
+.Nm ub-lldpd
 to override this description with the name of the peer neighbor if one
 is found or with the number of neighbors found.
 .Ed
@@ -355,7 +355,7 @@ neighbor. This option undoes the previous one.
 Enable promiscuous mode on managed interfaces.
 .Pp
 When the interface is not managed any more (or when quitting
-.Nm lldpd ) ,
+.Nm ub-lldpd ) ,
 the interface is left in promiscuous mode as it is difficult to know
 if someone else also put the interface in promiscuous mode.
 .Pp
@@ -454,7 +454,7 @@ MAC address is used and limit the propagation of the LLDPDU to the
 nearest bridge
 .Cd ( nearest-bridge ) .
 To instruct
-.Nm lldpd
+.Nm ub-lldpd
 to use the
 .Li 01:80:c2:00:00:03
 MAC address instead, use
@@ -477,7 +477,7 @@ instead.
 .Cd local Ar value
 .Bd -ragged -offset XXXXXX
 Force port ID subtype. By default,
-.Nm lldpd
+.Nm ub-lldpd
 will use the MAC address as port identifier and the interface name as
 port description, unless the interface has an alias. In this case, the
 interface name will be used as port identifier and the description
@@ -505,7 +505,7 @@ Force port description to the provided string.
 Change transmit delay to the specified value in seconds. The transmit
 delay is the delay between two transmissions of LLDP PDU. The default
 value is 30 seconds. Note:
-.Nm lldpd
+.Nm ub-lldpd
 also starts another system based refresh timer on each port to detect
 changes such as a hostname. This is the value of the tx-interval
 multiplied by 20.
@@ -562,7 +562,7 @@ Priority Code Point (PCP) as
 .Ar priority ,
 and Drop Eligible Indicator (DEI) as
 .Ar dei .
-.Nm lldpd
+.Nm ub-lldpd
 accepts LLDP frames on all VLANs.
 .Ed
 
@@ -617,7 +617,7 @@ is specified, remove specific instances of custom TLV.
 .Bd -ragged -offset XXXXXX
 Configure LLDP-MED fast start mechanism. When a new LLDP-MED-enabled
 neighbor is detected, fast start allows
-.Nm lldpd
+.Nm ub-lldpd
 to shorten the interval between two LLDPDU.
 .Cd enable
 should enable LLDP-MED fast start while
@@ -973,9 +973,9 @@ Here are two valid uses of this command:
 .Cd pause
 .Bd -ragged -offset XXXXXX
 Pause
-.Nm lldpd
+.Nm ub-lldpd
 operations.
-.Nm lldpd
+.Nm ub-lldpd
 will not send any more frames or receive ones. This can be undone with
 .Cd resume
 command.
@@ -984,9 +984,9 @@ command.
 .Cd resume
 .Bd -ragged -offset XXXXXX
 Resume
-.Nm lldpd
+.Nm ub-lldpd
 operations.
-.Nm lldpd
+.Nm ub-lldpd
 will start to send and receive frames. This command is issued
 internally after processing configuration but can be used at any time
 if a manual
@@ -999,10 +999,10 @@ command is issued.
 .Bl -tag -width "@LLDPD_CTL_SOCKET@XX" -compact
 .It @LLDPD_CTL_SOCKET@
 Unix-domain socket used for communication with
-.Xr lldpd 8 .
+.Xr ub-lldpd 8 .
 .El
 .Sh SEE ALSO
-.Xr lldpd 8
+.Xr ub-lldpd 8
 .Sh AUTHORS
 .An -nosplit
 The

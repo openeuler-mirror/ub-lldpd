@@ -1,4 +1,4 @@
-_lldpcli()
+_ub_lldpcli()
 {
     COMPREPLY=()
     COMP_WORDBREAKS=" "
@@ -15,7 +15,7 @@ _lldpcli()
     return 0
 }
 
-complete -F _lldpcli lldpcli
+complete -F _ub_lldpcli ub-lldpcli
 
 # Local Variables:
 # mode: Shell-Script

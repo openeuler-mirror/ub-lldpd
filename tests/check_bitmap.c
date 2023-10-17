@@ -17,7 +17,7 @@
 
 #include <check.h>
 
-#include "../src/daemon/lldpd.h"
+#include "../src/daemon/ub-lldpd.h"
 
 START_TEST(test_empty) {
 	uint32_t vlan_bmap[VLAN_BITMAP_LEN] = {};
