@@ -1,0 +1,6 @@
+Name: ub-lldpctl
+Description: Library to interface with ub-lldpd
+Version: @VERSION@
+URL: @PACKAGE_URL@
+Libs: -L@libdir@ -lub-lldpctl
+Cflags: -I@includedir@
