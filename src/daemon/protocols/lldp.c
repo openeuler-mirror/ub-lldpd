@@ -26,6 +26,11 @@
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 
+u_int8_t ub_dguid[GUID_LEN] = {0xFF, 0xFF, 0xFF, 0xFF,
+			       0xFF, 0xFF, 0xFF, 0xFF,
+			       0xFF, 0xFF, 0xFF, 0xFF,
+			       0xFF, 0xFF, 0x01, 0x09};
+
 static int
 lldpd_af_to_lldp_proto(int af)
 {
@@ -86,7 +91,7 @@ static int _lldp_send(struct lldpd *global,
 	struct ub_link_header ub_header;
 
 	memset(&ub_header, 0x0, sizeof(struct ub_link_header));
-	memset(ub_header.ub_dguid, 0xff, GUID_LEN);
+	memcpy(ub_header.ub_dguid, ub_dguid, GUID_LEN);
 
 	ub_header.ub_cfg = UB_CFG_TYPE;
 	ub_header.ub_protocol = htons(LLDP_PROTO);
