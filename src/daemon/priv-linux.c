@@ -125,6 +125,7 @@ asroot_open()
 static void
 asroot_iface_init_quirks(int ifindex, char *name)
 {
+	char command[] = "lldp stop";
 	int s = -1;
 	int fd = -1;
 
@@ -133,7 +134,7 @@ asroot_iface_init_quirks(int ifindex, char *name)
 		.cmd = ETHTOOL_GDRVINFO
 	};
 	struct ifreq ifr = {
-		.ifr_data = (caddr_t)&ethc
+		ifr.ifr_data = (caddr_t)&ethc
 	};
 	if ((s = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
 		log_warn("privsep", "unable to open a socket");
@@ -163,7 +164,6 @@ asroot_iface_init_quirks(int ifindex, char *name)
 	 * - on X722 with FW API version < 1.6
 	 */
 
-	char command[] = "lldp stop";
 	char sysfs_path[SYSFS_PATH_MAX+1];
 	if (snprintf(sysfs_path, SYSFS_PATH_MAX,
 	    "/sys/kernel/debug/i40e/%.*s/command",
