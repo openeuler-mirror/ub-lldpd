@@ -171,16 +171,6 @@ netlink_send(int s, int type, int family, int seq)
 	return 0;
 }
 
-static void
-netlink_parse_rtattr(struct rtattr *tb[], int max, struct rtattr *rta, int len)
-{
-	while (RTA_OK(rta, len)) {
-		if ((rta->rta_type <= max) && (!tb[rta->rta_type]))
-			tb[rta->rta_type] = rta;
-		rta = RTA_NEXT(rta,len);
-	}
-}
-
 /**
  * Parse a `afspec` attributes.
  *

@@ -1668,8 +1668,8 @@ lldpd_main(int argc, char *argv[], char *envp[])
 				fprintf(stderr, "-S can only be used once\n");
 				usage();
 			}
-                        descr_override = strdup(optarg);
-                        break;
+			descr_override = strdup(optarg);
+			break;
 		case 'P':
 			if (platform_override) {
 				fprintf(stderr, "-P can only be used once\n");
