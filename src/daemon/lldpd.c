@@ -68,6 +68,16 @@ extern const char	*__progname;
 # define __progname "ub-lldpd"
 #endif
 
+static char g_tlv_name[LLDP_TLV_TYPE_NUM][LLDP_TLV_NAME_SIZE] = {"End of LLDPDU",
+																 "Chassis ID",
+																 "Port ID",
+																 "Time To Live",
+																 "Port Description",
+																 "System Name",
+																 "System Description",
+																 "System Capabilities",
+																 "Management Address"};
+
 static void
 usage(void)
 {
@@ -903,28 +913,10 @@ static char *
 lldpd_get_tlv_name(int tlv_type)
 {
 	/* UB support TLV type 0-8, parse them only */
-	switch (tlv_type) {
-	case LLDP_TLV_END:
-		return "End of LLDPDU";
-	case LLDP_TLV_CHASSIS_ID:
-		return "Chassis ID";
-	case LLDP_TLV_PORT_ID:
-		return "Port ID";
-	case LLDP_TLV_TTL:
-		return "Time To Live";
-	case LLDP_TLV_PORT_DESCR:
-		return "Port Description";
-	case LLDP_TLV_SYSTEM_NAME:
-		return "System Name";
-	case LLDP_TLV_SYSTEM_DESCR:
-		return "System Description";
-	case LLDP_TLV_SYSTEM_CAP:
-		return "System Capabilities";
-	case LLDP_TLV_MGMT_ADDR:
-		return "Management Address";
-	default:
-		return NULL;
-	}
+	if ((tlv_type >= 0) && (tlv_type < LLDP_TLV_TYPE_NUM))
+		return g_tlv_name[tlv_type];
+
+	return NULL;
 }
 
 static int

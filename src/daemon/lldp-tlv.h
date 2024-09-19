@@ -31,4 +31,6 @@
 #define LLDP_TLV_SYSTEM_DESCR	6
 #define LLDP_TLV_SYSTEM_CAP	7
 #define LLDP_TLV_MGMT_ADDR	8
+#define LLDP_TLV_TYPE_NUM	9
+#define LLDP_TLV_NAME_SIZE	32
 #endif
