@@ -127,7 +127,8 @@ lldpd_get_device(struct lldpd *cfg, const char *name)
 	struct interfaces_device *iff;
 
 	TAILQ_FOREACH (iff, cfg->g_netlink->devices, next) {
-		if (strcmp(iff->name, name) == 0) break;
+		if (strcmp(iff->name, name) == 0)
+            break;
 	}
 	if (iff == NULL) log_warn("interfaces", "Not found interfaces device for name: %s", name);
 	return iff;
